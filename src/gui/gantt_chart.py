@@ -1,0 +1,331 @@
+"""
+Módulo que contiene la clase GanttChart para visualizar el diagrama de Gantt
+"""
+
+import tkinter as tk
+from tkinter import ttk
+import random
+
+class GanttChart(ttk.Frame):
+    """
+    Componente para visualizar un diagrama de Gantt interactivo.
+    
+    Attributes:
+        parent: Widget padre
+        width (int): Ancho del diagrama
+        height (int): Alto del diagrama
+        unit_width (int): Ancho de cada unidad de tiempo
+        process_height (int): Alto de cada proceso
+        colors (dict): Diccionario de colores por proceso
+        canvas: Canvas donde se dibuja el diagrama
+        time_markers (list): Marcadores de tiempo
+        current_time (int): Tiempo actual de la simulación
+        execution_history (list): Historial de ejecución de procesos
+        max_time (int): Tiempo máximo mostrado en el diagrama
+        scrollbar: Scrollbar horizontal para el diagrama
+    """
+    
+    def __init__(self, parent, width=800, height=300, unit_width=30, process_height=30):
+        """
+        Inicializa el componente para el diagrama de Gantt.
+        
+        Args:
+            parent: Widget padre
+            width (int, optional): Ancho del widget. Defaults to 800.
+            height (int, optional): Alto del widget. Defaults to 300.
+            unit_width (int, optional): Ancho de cada unidad de tiempo. Defaults to 30.
+            process_height (int, optional): Alto de cada proceso. Defaults to 30.
+        """
+        super().__init__(parent)
+        self.parent = parent
+        self.width = width
+        self.height = height
+        self.unit_width = unit_width
+        self.process_height = process_height
+        self.colors = {}
+        
+        # Configurar el frame
+        self.pack(fill=tk.BOTH, expand=True)
+        
+        # Crear el canvas con scrollbar
+        self.canvas_frame = ttk.Frame(self)
+        self.canvas_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self.canvas = tk.Canvas(self.canvas_frame, width=width, height=height, background="white")
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.scrollbar = ttk.Scrollbar(self.canvas_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.canvas.configure(xscrollcommand=self.scrollbar.set)
+        
+        # Variables de estado
+        self.time_markers = []
+        self.current_time = 0
+        self.execution_history = []
+        self.max_time = 0
+        
+        # Inicializar el diagrama
+        self.clear()
+    
+    def clear(self):
+        """Limpia el diagrama y reinicia las variables de estado."""
+        self.canvas.delete("all")
+        self.time_markers = []
+        self.current_time = 0
+        self.execution_history = []
+        self.max_time = 0
+        self.colors = {}
+        
+        # Dibujar línea de tiempo inicial
+        self._draw_timeline(0, 10)
+    
+    def set_execution_history(self, execution_history, max_time=None):
+        """
+        Establece el historial de ejecución completo para animarlo.
+        
+        Args:
+            execution_history (list): Historial completo de ejecución
+            max_time (int, optional): Tiempo máximo a mostrar. Si es None, se calcula.
+        """
+        self.execution_history = execution_history
+        
+        # Calcular tiempo máximo si no se proporciona
+        if max_time is None and execution_history:
+            max_time = max(item['end_time'] for item in execution_history)
+        
+        self.max_time = max_time or 10
+        
+        # Asignar colores a los procesos
+        self._assign_colors()
+        
+        # Redimensionar el canvas
+        self.canvas.configure(scrollregion=(0, 0, self.max_time * self.unit_width + 50, self.height))
+        
+        # Dibujar la línea de tiempo completa
+        self._draw_timeline(0, self.max_time)
+    
+    def animate_execution(self, speed=1.0, callback=None):
+        """
+        Anima la ejecución de los procesos paso a paso.
+        
+        Args:
+            speed (float, optional): Velocidad de la animación. Defaults to 1.0.
+            callback (callable, optional): Función a llamar al finalizar. Defaults to None.
+        """
+        if not self.execution_history:
+            return
+        
+        self.clear()
+        self._draw_timeline(0, self.max_time)
+        self.current_time = 0
+        
+        # Ordenar por tiempo de inicio
+        sorted_history = sorted(self.execution_history, key=lambda x: x['start_time'])
+        
+        def animate_step(index=0):
+            if index >= len(sorted_history):
+                if callback:
+                    callback()
+                return
+            
+            item = sorted_history[index]
+            self._draw_execution_block(item)
+            self.current_time = item['end_time']
+            
+            # Actualizar marcador de tiempo actual
+            self._draw_time_marker(self.current_time)
+            
+            # Programar el siguiente paso
+            delay = int(1000 / speed)  # Convertir speed a milisegundos
+            self.after(delay, lambda: animate_step(index + 1))
+        
+        # Comenzar la animación
+        self.after(100, lambda: animate_step())
+    
+    def draw_full_execution(self):
+        """Dibuja toda la ejecución de una vez, sin animación."""
+        if not self.execution_history:
+            return
+        
+        self.clear()
+        self._draw_timeline(0, self.max_time)
+        
+        # Dibujar todos los bloques de ejecución
+        for item in self.execution_history:
+            self._draw_execution_block(item)
+        
+        # Desplazar al inicio
+        self.canvas.xview_moveto(0)
+    
+    def _draw_timeline(self, start_time, end_time):
+        """
+        Dibuja la línea de tiempo con marcadores.
+        
+        Args:
+            start_time (int): Tiempo inicial
+            end_time (int): Tiempo final
+        """
+        # Línea base
+        y_pos = self.height - 20
+        self.canvas.create_line(
+            0, y_pos, 
+            end_time * self.unit_width, y_pos, 
+            width=2, fill="black"
+        )
+        
+        # Marcadores de tiempo
+        for t in range(start_time, end_time + 1):
+            x_pos = t * self.unit_width
+            self.canvas.create_line(
+                x_pos, y_pos - 5, 
+                x_pos, y_pos + 5, 
+                width=1, fill="black"
+            )
+            self.canvas.create_text(
+                x_pos, y_pos + 15, 
+                text=str(t), fill="black", 
+                font=("Arial", 8)
+            )
+    
+    def _draw_time_marker(self, time):
+        """
+        Dibuja o actualiza el marcador del tiempo actual.
+        
+        Args:
+            time (int): Tiempo actual
+        """
+        # Borrar marcadores anteriores
+        self.canvas.delete("time_marker")
+        
+        # Dibujar nuevo marcador
+        x_pos = time * self.unit_width
+        self.canvas.create_line(
+            x_pos, 0, 
+            x_pos, self.height, 
+            width=1, fill="red", dash=(4, 4), 
+            tags="time_marker"
+        )
+        
+        # Asegurarse de que el marcador sea visible
+        self._ensure_visible(time)
+    
+    def _draw_execution_block(self, execution_item):
+        """
+        Dibuja un bloque de ejecución de proceso.
+        
+        Args:
+            execution_item (dict): Información del bloque de ejecución
+        """
+        process = execution_item['process']
+        start_time = execution_item['start_time']
+        end_time = execution_item['end_time']
+        
+        # Determinar posición vertical
+        pid = process.pid
+        # Calcular y_pos basado en el PID
+        pid_index = int(pid[1:]) if pid[0].upper() == 'P' and pid[1:].isdigit() else hash(pid) % 10
+        y_pos = 30 + pid_index * self.process_height
+        
+        # Obtener color para el proceso
+        if pid not in self.colors:
+            self._assign_color(pid)
+        color = self.colors[pid]
+        
+        # Dibujar el bloque
+        x1 = start_time * self.unit_width
+        x2 = end_time * self.unit_width
+        y1 = y_pos
+        y2 = y_pos + self.process_height - 5
+        
+        block_id = self.canvas.create_rectangle(
+            x1, y1, x2, y2, 
+            fill=color, outline="black", 
+            tags=f"block_{pid}"
+        )
+        
+        # Añadir texto
+        text_id = self.canvas.create_text(
+            (x1 + x2) / 2, (y1 + y2) / 2, 
+            text=pid, fill="black", 
+            font=("Arial", 9, "bold"), 
+            tags=f"text_{pid}"
+        )
+        
+        # Añadir tooltip
+        self._add_tooltip(block_id, f"{pid}: {start_time} -> {end_time}")
+        self._add_tooltip(text_id, f"{pid}: {start_time} -> {end_time}")
+    
+    def _add_tooltip(self, item_id, text):
+        """
+        Añade un tooltip a un elemento del canvas.
+        
+        Args:
+            item_id: ID del elemento
+            text (str): Texto del tooltip
+        """
+        tooltip = None
+        
+        def show_tooltip(event):
+            nonlocal tooltip
+            x, y = event.x + self.canvas.winfo_rootx(), event.y + self.canvas.winfo_rooty()
+            tooltip = tk.Toplevel(self)
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{x+10}+{y+10}")
+            label = ttk.Label(tooltip, text=text, background="#ffffe0", relief="solid", borderwidth=1)
+            label.pack()
+        
+        def hide_tooltip(event):
+            nonlocal tooltip
+            if tooltip:
+                tooltip.destroy()
+                tooltip = None
+        
+        self.canvas.tag_bind(item_id, "<Enter>", show_tooltip)
+        self.canvas.tag_bind(item_id, "<Leave>", hide_tooltip)
+    
+    def _ensure_visible(self, time):
+        """
+        Asegura que el tiempo indicado sea visible en el canvas.
+        
+        Args:
+            time (int): Tiempo a mostrar
+        """
+        canvas_width = self.canvas.winfo_width()
+        content_width = self.max_time * self.unit_width
+        
+        # Convertir tiempo a coordenadas normalizadas (0-1)
+        x_pos = time * self.unit_width / content_width
+        
+        # Obtener región visible actual
+        visible_left, _ = self.scrollbar.get()
+        visible_width = canvas_width / content_width
+        
+        # Si el tiempo está fuera de la región visible, ajustar
+        if x_pos > visible_left + visible_width - 0.1:
+            # Desplazar para que el tiempo esté visible
+            self.canvas.xview_moveto(max(0, x_pos - visible_width + 0.1))
+    
+    def _assign_colors(self):
+        """Asigna colores a los procesos del historial de ejecución."""
+        for item in self.execution_history:
+            pid = item['process'].pid
+            if pid not in self.colors:
+                self._assign_color(pid)
+    
+    def _assign_color(self, pid):
+        """
+        Asigna un color a un proceso específico.
+        
+        Args:
+            pid (str): ID del proceso
+        """
+        # Colores pastel predefinidos
+        pastel_colors = [
+            "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",
+            "#FFDAB9", "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
+        ]
+        
+        # Asignar un color basado en el índice numérico del PID o un hash
+        pid_index = int(pid[1:]) if pid[0].upper() == 'P' and pid[1:].isdigit() else hash(pid)
+        color_index = pid_index % len(pastel_colors)
+        self.colors[pid] = pastel_colors[color_index]

@@ -1,0 +1,2 @@
+matplotlib>=3.5.0
+tkinter>=8.6.0
