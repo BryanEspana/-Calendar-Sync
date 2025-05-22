@@ -272,18 +272,118 @@ class SchedulerTab:
             messagebox.showwarning("Advertencia", "No se ha seleccionado un algoritmo.")
             return
         
-        # Cargar los procesos en el calendarizador
-        self.current_scheduler.load_processes(self.processes)
-        
-        # Ejecutar la simulación
-        results = self.current_scheduler.run_simulation()
-        
-        # Actualizar métricas
-        self._update_metrics(results)
-        
-        # Actualizar el diagrama de Gantt
-        self.gantt_chart.set_execution_history(results['execution_history'], results['total_time'])
-        self.gantt_chart.animate_execution(speed=2.0)
+        try:
+            # Mostrar un mensaje de cargando mientras se ejecuta la simulación
+            loading_window = tk.Toplevel(self.parent)
+            loading_window.title("Ejecutando simulación")
+            loading_window.geometry("300x100")
+            loading_window.transient(self.parent)
+            loading_window.grab_set()
+            loading_label = ttk.Label(loading_window, text="Ejecutando simulación, por favor espere...")
+            loading_label.pack(pady=20, padx=20)
+            loading_window.update()
+            
+            # Cargar los procesos en el calendarizador
+            self.current_scheduler.load_processes(self.processes)
+            
+            # Ejecutar la simulación
+            results = self.current_scheduler.run_simulation()
+            
+            # Cerrar ventana de carga
+            loading_window.destroy()
+            
+            # Actualizar métricas
+            self._update_metrics(results)
+            
+            # Reiniciar completamente el componente de diagrama de Gantt para garantizar visibilidad
+            visualization_frame = None
+            for child in self.parent.winfo_children():
+                if isinstance(child, ttk.LabelFrame) and child.cget("text") == "Simulación":
+                    visualization_frame = child
+                    break
+            
+            if visualization_frame:
+                # Limpiar el frame de visualización
+                for child in visualization_frame.winfo_children():
+                    child.destroy()
+                
+                # Crear un nuevo componente de diagrama de Gantt
+                self.gantt_chart = GanttChart(visualization_frame)
+                
+                # Configurar el nuevo diagrama
+                self.gantt_chart.set_execution_history(results['execution_history'], results['total_time'])
+                
+                # Dibujar claramente los bloques de ejecución
+                self.gantt_chart.clear()
+                self.gantt_chart._draw_timeline(0, results['total_time'])
+                
+                # Dibujar cada bloque de ejecución con un tamaño más grande y visible
+                for item in results['execution_history']:
+                    process = item['process']
+                    start_time = item['start_time']
+                    end_time = item['end_time']
+                    
+                    # Obtener o asignar color al proceso
+                    if not hasattr(process, 'color') or not process.color:
+                        # Colores pastel predefinidos
+                        pastel_colors = [
+                            "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",
+                            "#FFDAB9", "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
+                        ]
+                        pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else hash(process.pid) % 10
+                        process.color = pastel_colors[pid_index % len(pastel_colors)]
+                    
+                    # Determinar posición vertical
+                    pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else 0
+                    y_pos = 30 + pid_index * 30
+                    
+                    # Dibujar el bloque con borde negro y color de relleno
+                    x1 = start_time * self.gantt_chart.unit_width
+                    x2 = end_time * self.gantt_chart.unit_width
+                    y1 = y_pos
+                    y2 = y_pos + 25
+                    
+                    # Crear rectángulo con borde más grueso
+                    self.gantt_chart.canvas.create_rectangle(
+                        x1, y1, x2, y2, 
+                        fill=process.color, outline="black", width=2,
+                        tags=f"block_{process.pid}"
+                    )
+                    
+                    # Añadir texto del proceso en el bloque
+                    self.gantt_chart.canvas.create_text(
+                        (x1 + x2) / 2, (y1 + y2) / 2, 
+                        text=process.pid, fill="black", 
+                        font=("Arial", 10, "bold"), 
+                        tags=f"text_{process.pid}"
+                    )
+                
+                # Configurar la región visible del canvas
+                self.gantt_chart.canvas.configure(scrollregion=(0, 0, results['total_time'] * self.gantt_chart.unit_width + 50, 400))
+                
+                # Forzar actualización de la interfaz
+                self.parent.update()
+                self.gantt_chart.canvas.update()
+            
+            # Mostrar mensaje de éxito
+            messagebox.showinfo("Simulación completada", 
+                              f"Simulación completada exitosamente con el algoritmo {self.algorithm_var.get()}.\n\n"
+                              f"Tiempo promedio de espera: {results['avg_waiting_time']:.2f}\n"
+                              f"Tiempo promedio de turnaround: {results['avg_turnaround_time']:.2f}\n"
+                              f"Tiempo total de ejecución: {results['total_time']}")
+
+            
+        except Exception as e:
+            # Cerrar ventana de carga si existe
+            try:
+                loading_window.destroy()
+            except:
+                pass
+                
+            import traceback
+            error_message = f"Error durante la simulación: {str(e)}\n\n{traceback.format_exc()}"
+            messagebox.showerror("Error en simulación", error_message)
+            print(error_message)  # También imprimir en consola para depuración:
     
     def _create_examples(self):
         """Crea archivos de ejemplo para procesos."""
