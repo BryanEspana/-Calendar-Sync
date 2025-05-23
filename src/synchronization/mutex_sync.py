@@ -38,18 +38,21 @@ class MutexSynchronization(BaseSynchronization):
             action.set_completed()
             return True
         
-        # Verificar si el recurso está disponible
-        if resource.is_available() or process in resource.using_processes:
+        # Verificar si el recurso está disponible para este tipo de acción
+        if resource.is_available_for(action.action_type) or process in resource.using_processes:
             # Adquirir el recurso para el proceso (si aún no lo tiene)
             if process not in resource.using_processes:
-                resource.acquire(process)
+                resource.acquire(process, action.action_type)
             
             # Marcar la acción como ejecutada y completada
             action.set_running()
             action.set_completed()
             
             # Liberar el recurso después de usarlo (una acción dura un ciclo)
-            resource.release(process)
+            released_processes = resource.release(process)
+            
+            # Los procesos liberados ya han sido actualizados por el recurso
+            # No necesitamos hacer nada más con ellos en el contexto de Mutex
             
             return True
         else:
@@ -57,7 +60,7 @@ class MutexSynchronization(BaseSynchronization):
             action.set_waiting()
             
             # Intentar adquirir el recurso (esto pondrá al proceso en la cola)
-            resource.acquire(process)
+            resource.acquire(process, action.action_type)
             
             return False
     
