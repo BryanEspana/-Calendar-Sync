@@ -38,26 +38,38 @@ class SemaphoreSynchronization(BaseSynchronization):
             action.set_completed()
             return True
         
-        # Verificar si el recurso está disponible o el proceso ya lo está usando
-        if resource.is_available() or process in resource.using_processes:
+        # Verificar si el recurso está disponible para este tipo de acción (READ permite múltiples lectores)
+        if resource.is_available_for(action.action_type) or process in resource.using_processes:
             # Adquirir el recurso para el proceso (si aún no lo tiene)
             if process not in resource.using_processes:
-                resource.acquire(process)
+                resource.acquire(process, action.action_type)
             
             # Marcar la acción como ejecutada y completada
             action.set_running()
             action.set_completed()
             
             # Liberar el recurso después de usarlo (una acción dura un ciclo)
-            resource.release(process)
+            released_processes = resource.release(process)
+            
+            # Verificar si algún proceso liberado estaba en la lista de pendientes
+            for released_process in released_processes:
+                # Buscar acciones pendientes de este proceso
+                for pending_action in self.pending_actions[:]:
+                    if pending_action.pid == released_process.pid and pending_action.state == "WAITING":
+                        # Marcarla como completada y quitarla de pendientes
+                        pending_action.set_completed()
+                        if pending_action in self.pending_actions:
+                            self.pending_actions.remove(pending_action)
+                        if pending_action not in self.completed_actions:
+                            self.completed_actions.append(pending_action)
             
             return True
         else:
-            # El recurso no está disponible, el proceso debe esperar
+            # El recurso no está disponible para este tipo de acción, el proceso debe esperar
             action.set_waiting()
             
             # Intentar adquirir el recurso (esto pondrá al proceso en la cola)
-            resource.acquire(process)
+            resource.acquire(process, action.action_type)
             
             return False
     
