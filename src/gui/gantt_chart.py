@@ -43,6 +43,7 @@ class GanttChart(ttk.Frame):
         self.unit_width = unit_width
         self.process_height = process_height
         self.colors = {}
+        self.block_counter = 0  # Contador para identificar bloques únicamente
         
         # Configurar el frame
         self.pack(fill=tk.BOTH, expand=True)
@@ -75,6 +76,7 @@ class GanttChart(ttk.Frame):
         self.execution_history = []
         self.max_time = 0
         self.colors = {}
+        self.block_counter = 0
         
         # Dibujar línea de tiempo inicial
         self._draw_timeline(0, 10)
@@ -119,6 +121,9 @@ class GanttChart(ttk.Frame):
         self._draw_timeline(0, self.max_time)
         self.current_time = 0
         
+        # Añadir etiquetas de proceso primero
+        self._add_process_labels()
+        
         # Ordenar por tiempo de inicio
         sorted_history = sorted(self.execution_history, key=lambda x: x['start_time'])
         
@@ -129,7 +134,7 @@ class GanttChart(ttk.Frame):
                 return
             
             item = sorted_history[index]
-            self._draw_execution_block(item)
+            self._draw_block_only(item)  # Dibujar solo el bloque sin texto
             self.current_time = item['end_time']
             
             # Actualizar marcador de tiempo actual
@@ -150,9 +155,12 @@ class GanttChart(ttk.Frame):
         self.clear()
         self._draw_timeline(0, self.max_time)
         
-        # Dibujar todos los bloques de ejecución
+        # Primero dibujar todos los bloques SIN TEXTO
         for item in self.execution_history:
-            self._draw_execution_block(item)
+            self._draw_block_only(item)
+        
+        # Luego añadir etiquetas de texto por proceso en ubicaciones específicas
+        self._add_process_labels()
         
         # Desplazar al inicio
         self.canvas.xview_moveto(0)
@@ -209,9 +217,9 @@ class GanttChart(ttk.Frame):
         # Asegurarse de que el marcador sea visible
         self._ensure_visible(time)
     
-    def _draw_execution_block(self, execution_item):
+    def _draw_block_only(self, execution_item):
         """
-        Dibuja un bloque de ejecución de proceso.
+        Dibuja solo el bloque de ejecución sin texto.
         
         Args:
             execution_item (dict): Información del bloque de ejecución
@@ -237,23 +245,38 @@ class GanttChart(ttk.Frame):
         y1 = y_pos
         y2 = y_pos + self.process_height - 5
         
+        # Dibujar solo el rectángulo, sin texto
         block_id = self.canvas.create_rectangle(
             x1, y1, x2, y2, 
             fill=color, outline="black", 
-            tags=f"block_{pid}"
+            tags=f"proc_{pid}"
         )
         
-        # Añadir texto
-        text_id = self.canvas.create_text(
-            (x1 + x2) / 2, (y1 + y2) / 2, 
-            text=pid, fill="black", 
-            font=("Arial", 9, "bold"), 
-            tags=f"text_{pid}"
-        )
-        
-        # Añadir tooltip
+        # Añadir tooltip al bloque
         self._add_tooltip(block_id, f"{pid}: {start_time} -> {end_time}")
-        self._add_tooltip(text_id, f"{pid}: {start_time} -> {end_time}")
+    
+    def _add_process_labels(self):
+        """Añade etiquetas de texto para cada proceso una sola vez."""
+        # Encontrar todos los procesos únicos
+        process_ids = set()
+        for item in self.execution_history:
+            process_ids.add(item['process'].pid)
+        
+        # Para cada proceso, añadir un texto en el centro de su fila
+        for pid in process_ids:
+            # Calcular posición vertical
+            pid_index = int(pid[1:]) if pid[0].upper() == 'P' and pid[1:].isdigit() else hash(pid) % 10
+            y_pos = 30 + pid_index * self.process_height + self.process_height / 2 - 2.5
+            
+            # Añadir texto al final de la línea de tiempo
+            x_pos = 10  # Al inicio de la línea
+            
+            text_id = self.canvas.create_text(
+                x_pos, y_pos,
+                text=pid, fill="black",
+                font=("Arial", 9, "bold"),
+                tags=f"label_{pid}"
+            )
     
     def _add_tooltip(self, item_id, text):
         """

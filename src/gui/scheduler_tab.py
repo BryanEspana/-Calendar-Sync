@@ -347,16 +347,19 @@ class SchedulerTab:
                     self.gantt_chart.canvas.create_rectangle(
                         x1, y1, x2, y2, 
                         fill=process.color, outline="black", width=2,
-                        tags=f"block_{process.pid}"
+                        tags=f"block_{process.pid}_{start_time}_{end_time}"  # Tag único basado en PID y tiempos
                     )
                     
-                    # Añadir texto del proceso en el bloque
-                    self.gantt_chart.canvas.create_text(
-                        (x1 + x2) / 2, (y1 + y2) / 2, 
-                        text=process.pid, fill="black", 
-                        font=("Arial", 10, "bold"), 
-                        tags=f"text_{process.pid}"
-                    )
+                    # Añadir texto del proceso en el bloque con un tag único
+                    # Calcular ancho del bloque para decidir si mostrar texto
+                    block_width = x2 - x1
+                    if block_width >= 20:  # Solo mostrar texto si hay suficiente espacio
+                        self.gantt_chart.canvas.create_text(
+                            (x1 + x2) / 2, (y1 + y2) / 2, 
+                            text=process.pid, fill="black", 
+                            font=("Arial", 10, "bold"), 
+                            tags=f"text_{process.pid}_{start_time}_{end_time}"  # Tag único para evitar superposición
+                        )
                 
                 # Configurar la región visible del canvas
                 self.gantt_chart.canvas.configure(scrollregion=(0, 0, results['total_time'] * self.gantt_chart.unit_width + 50, 400))
