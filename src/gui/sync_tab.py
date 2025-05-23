@@ -80,10 +80,6 @@ class SyncTab:
         ttk.Button(control_frame, text="Iniciar Simulación", 
                   command=self._run_simulation).grid(row=0, column=5, padx=5, pady=5)
         
-        # Botón para generar archivos de ejemplo
-        ttk.Button(control_frame, text="Generar Ejemplos", 
-                  command=self._create_examples).grid(row=0, column=6, padx=5, pady=5)
-        
         # Inicializar con el mecanismo seleccionado
         self._on_mechanism_change(None)
     
