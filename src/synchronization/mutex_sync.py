@@ -68,7 +68,39 @@ class MutexSynchronization(BaseSynchronization):
         Returns:
             dict: Estado del ciclo actual
         """
-        cycle_result = super().execute_cycle()
+        # Registrar el estado antes de ejecutar el ciclo para visualización
+        cycle_actions = []
+        
+        # Procesar las acciones pendientes en orden FIFO
+        if self.pending_actions:
+            current_action = self.pending_actions[0]
+            success = self.process_action(current_action)
+            
+            # Registrar el estado de la acción para visualización
+            cycle_actions.append({
+                'action': current_action,
+                'success': success
+            })
+            
+            # Si la acción se completó, moverla a la lista de completadas
+            if success and current_action.state == "COMPLETED":
+                self.pending_actions.remove(current_action)
+                self.completed_actions.append(current_action)
+        
+        # Guardar el historial de este ciclo (importante para visualización)
+        self.execution_history.append({
+            'cycle': self.current_time,
+            'actions': cycle_actions
+        })
+        
+        # Avanzar el tiempo
+        self.current_time += 1
+        
+        cycle_result = {
+            'cycle': self.current_time - 1,
+            'actions': cycle_actions,
+            'remaining': len(self.pending_actions)
+        }
         
         # Intentar ejecutar acciones que estaban esperando
         waiting_actions = [action for action in self.pending_actions 

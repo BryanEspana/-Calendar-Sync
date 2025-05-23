@@ -47,7 +47,7 @@ class SyncTab:
             "Mutex": MutexSynchronization(),
             "Semáforo": SemaphoreSynchronization()
         }
-        self.current_mechanism = None
+        self.current_mechanism = self.mechanisms["Mutex"]  # Establecer valor inicial
         
         # Crear componentes de la interfaz
         self._create_control_panel()
@@ -89,8 +89,20 @@ class SyncTab:
         visualization_frame = ttk.LabelFrame(self.parent, text="Simulación")
         visualization_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+        # Crear una etiqueta informativa
+        ttk.Label(visualization_frame, 
+                 text="Diagrama de Gantt: Cada fila representa un proceso y sus acciones en el tiempo").pack(pady=5)
+        
+        # Frame para contener el diagrama
+        gantt_frame = ttk.Frame(visualization_frame)
+        gantt_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
         # Crear el componente de diagrama de Gantt para visualizar las acciones
-        self.gantt_chart = GanttChart(visualization_frame)
+        self.gantt_chart = GanttChart(gantt_frame)
+        
+        # Forzar un tamaño mínimo adecuado para el canvas
+        self.gantt_chart.canvas.config(width=750, height=300)
+        self.gantt_chart.canvas.pack(fill=tk.BOTH, expand=True)
     
     def _create_info_panel(self):
         """Crea el panel de información para el simulador."""
@@ -333,24 +345,180 @@ class SyncTab:
         if not self.current_mechanism:
             messagebox.showwarning("Advertencia", "No se ha seleccionado un mecanismo de sincronización.")
             return
+            
+        try:
+            # Cargar los datos en el mecanismo de sincronización
+            self.current_mechanism.load_processes(list(self.processes.values()))
+            self.current_mechanism.load_resources(list(self.resources.values()))
+            self.current_mechanism.load_actions(self.actions)
+            
+            # Ejecutar la simulación
+            results = self.current_mechanism.run_simulation(max_cycles=100)
+            
+            # Actualizar la lista de acciones con los nuevos estados
+            self._update_actions_list()
+            
+            # Reiniciar completamente el componente de diagrama de Gantt para garantizar visibilidad
+            visualization_frame = None
+            for child in self.parent.winfo_children():
+                if isinstance(child, ttk.LabelFrame) and child.cget("text") == "Simulación":
+                    visualization_frame = child
+                    break
+            
+            if visualization_frame:
+                # Limpiar el frame de visualización
+                for child in visualization_frame.winfo_children():
+                    child.destroy()
+                
+                # Crear un nuevo componente de diagrama de Gantt
+                self.gantt_chart = GanttChart(visualization_frame)
+                
+                # Construir el historial de ejecución basado en las acciones simuladas
+                execution_history = self._build_execution_history_from_actions(self.actions)
+                
+                # Configurar el nuevo diagrama
+                max_time = 10  # Mínimo 10 unidades de tiempo
+                if execution_history:
+                    max_time = max([entry['end_time'] for entry in execution_history] + [max_time])
+                
+                # Dibujar claramente los bloques de ejecución
+                self.gantt_chart.clear()
+                self.gantt_chart._draw_timeline(0, max_time)
+                
+                # Dibujar cada bloque de ejecución con un tamaño más grande y visible
+                for item in execution_history:
+                    process = item['process']
+                    start_time = item['start_time']
+                    end_time = item['end_time']
+                    state = item['state']
+                    
+                    # Obtener o asignar color al proceso
+                    if not hasattr(process, 'color') or not process.color:
+                        # Colores pastel predefinidos
+                        pastel_colors = [
+                            "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",
+                            "#FFDAB9", "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
+                        ]
+                        pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else hash(process.pid) % 10
+                        process.color = pastel_colors[pid_index % len(pastel_colors)]
+                    
+                    # Determinar posición vertical basada en el ID del proceso
+                    pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else 0
+                    y_pos = 30 + pid_index * 30
+                    
+                    # Dibujar el bloque con borde negro y color de relleno
+                    x1 = start_time * self.gantt_chart.unit_width
+                    x2 = end_time * self.gantt_chart.unit_width
+                    y1 = y_pos
+                    y2 = y_pos + 25
+                    
+                    # Ajustar color según el estado
+                    block_color = process.color
+                    if state == "WAITING":
+                        # Usar un tono más claro para estados de espera
+                        block_color = self._lighten_color(block_color)
+                    
+                    # Crear rectángulo con borde más grueso
+                    block_id = self.gantt_chart.canvas.create_rectangle(
+                        x1, y1, x2, y2, 
+                        fill=block_color, outline="black", width=2,
+                        tags=f"block_{process.pid}_{start_time}_{end_time}"
+                    )
+                    
+                    # Añadir texto del proceso en el bloque si hay suficiente espacio
+                    block_width = x2 - x1
+                    if block_width > 30:
+                        self.gantt_chart.canvas.create_text(
+                            (x1 + x2) / 2, (y1 + y2) / 2,
+                            text=f"{process.pid}", fill="black",
+                            tags=f"text_{process.pid}_{start_time}_{end_time}"
+                        )
+                
+                # Añadir etiquetas para los procesos al lado izquierdo
+                for pid, process in self.processes.items():
+                    pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else 0
+                    y_pos = 30 + pid_index * 30 + 12.5  # Centrado vertical
+                    self.gantt_chart.canvas.create_text(
+                        10, y_pos, text=process.pid, fill="black", anchor=tk.W,
+                        font=("Arial", 10, "bold"), tags="process_label"
+                    )
+                
+                # Actualizar el canvas
+                self.gantt_chart.canvas.update()
+            
+            # Mostrar un mensaje de confirmación
+            messagebox.showinfo("Simulación Completada", 
+                              f"Simulación completada exitosamente.\nAcciones completadas: {results['completed_actions']}/{results['total_actions']}")
+                              
+        except Exception as e:
+            # Mostrar error detallado
+            import traceback
+            error_msg = f"Error al ejecutar la simulación: {e}\n\n{traceback.format_exc()}"
+            print(error_msg)
+            messagebox.showerror("Error en la Simulación", error_msg)
+    
+    def _build_execution_history_from_actions(self, actions):
+        """
+        Construye un historial de ejecución a partir de las acciones para visualización.
         
-        # Cargar los datos en el mecanismo de sincronización
-        self.current_mechanism.load_processes(list(self.processes.values()))
-        self.current_mechanism.load_resources(list(self.resources.values()))
-        self.current_mechanism.load_actions(self.actions)
+        Args:
+            actions (list): Lista de acciones
+            
+        Returns:
+            list: Historial de ejecución para el diagrama de Gantt
+        """
+        execution_history = []
         
-        # Ejecutar la simulación
-        results = self.current_mechanism.run_simulation(max_cycles=100)
+        # Ordenar acciones por ciclo y proceso
+        actions_sorted = sorted(actions, key=lambda a: (a.cycle, a.pid))
         
-        # Actualizar la lista de acciones con los nuevos estados
-        self._update_actions_list()
+        # Generar entradas para el historial de ejecución
+        for action in actions_sorted:
+            process = self.processes.get(action.pid)
+            if not process:
+                continue
+                
+            # Determinar el estado basado en el estado de la acción
+            state = "WAITING"
+            if action.state == "COMPLETED":
+                state = "ACCESSED"
+            elif action.state == "RUNNING":
+                state = "ACCESSED"
+            
+            # Crear la entrada para el historial
+            entry = {
+                'process': process,
+                'start_time': action.cycle,
+                'end_time': action.cycle + 1,
+                'state': state,
+                'action': action
+            }
+            execution_history.append(entry)
+            
+        return execution_history
+    
+    def _lighten_color(self, hex_color):
+        """
+        Aclara un color hexadecimal para representar estados de espera.
         
-        # Preparar el historial de ejecución para el diagrama de Gantt
-        execution_history = self._prepare_execution_history(results)
+        Args:
+            hex_color (str): Color hexadecimal (#RRGGBB)
+            
+        Returns:
+            str: Color aclarado
+        """
+        # Convertir hex a RGB
+        r = int(hex_color[1:3], 16)
+        g = int(hex_color[3:5], 16)
+        b = int(hex_color[5:7], 16)
         
-        # Actualizar el diagrama de Gantt
-        self.gantt_chart.set_execution_history(execution_history, results['total_time'])
-        self.gantt_chart.animate_execution(speed=1.0)
+        # Aclarar (mezclar con blanco)
+        r = int(r * 0.5 + 255 * 0.5)
+        g = int(g * 0.5 + 255 * 0.5)
+        b = int(b * 0.5 + 255 * 0.5)
+        
+        # Convertir de vuelta a hex
+        return f"#{r:02x}{g:02x}{b:02x}"
     
     def _create_examples(self):
         """Crea archivos de ejemplo para procesos, recursos y acciones."""
