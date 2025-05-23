@@ -427,21 +427,16 @@ class SyncTab:
                     
                     # Añadir texto del proceso en el bloque si hay suficiente espacio
                     block_width = x2 - x1
-                    if block_width > 30:
+                    if block_width >= 20:  # Solo mostrar texto si hay suficiente espacio
                         self.gantt_chart.canvas.create_text(
-                            (x1 + x2) / 2, (y1 + y2) / 2,
-                            text=f"{process.pid}", fill="black",
-                            tags=f"text_{process.pid}_{start_time}_{end_time}"
+                            (x1 + x2) / 2, (y1 + y2) / 2, 
+                            text=process.pid, fill="black", 
+                            font=("Arial", 10, "bold"), 
+                            tags=f"text_{process.pid}_{start_time}_{end_time}"  # Tag único para evitar superposición
                         )
                 
                 # Añadir etiquetas para los procesos al lado izquierdo
-                for pid, process in self.processes.items():
-                    pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else 0
-                    y_pos = 30 + pid_index * 30 + 12.5  # Centrado vertical
-                    self.gantt_chart.canvas.create_text(
-                        10, y_pos, text=process.pid, fill="black", anchor=tk.W,
-                        font=("Arial", 10, "bold"), tags="process_label"
-                    )
+                # NOTA: Se han eliminado las etiquetas de texto a petición del usuario
                 
                 # Actualizar el canvas
                 self.gantt_chart.canvas.update()
