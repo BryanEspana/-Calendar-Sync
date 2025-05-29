@@ -7,35 +7,11 @@ from tkinter import ttk
 import random
 
 class GanttChart(ttk.Frame):
-    """
-    Componente para visualizar un diagrama de Gantt interactivo.
-    
-    Attributes:
-        parent: Widget padre
-        width (int): Ancho del diagrama
-        height (int): Alto del diagrama
-        unit_width (int): Ancho de cada unidad de tiempo
-        process_height (int): Alto de cada proceso
-        colors (dict): Diccionario de colores por proceso
-        canvas: Canvas donde se dibuja el diagrama
-        time_markers (list): Marcadores de tiempo
-        current_time (int): Tiempo actual de la simulación
-        execution_history (list): Historial de ejecución de procesos
-        max_time (int): Tiempo máximo mostrado en el diagrama
-        scrollbar: Scrollbar horizontal para el diagrama
-    """
+
     
     def __init__(self, parent, width=800, height=300, unit_width=30, process_height=30):
-        """
-        Inicializa el componente para el diagrama de Gantt.
-        
-        Args:
-            parent: Widget padre
-            width (int, optional): Ancho del widget. Defaults to 800.
-            height (int, optional): Alto del widget. Defaults to 300.
-            unit_width (int, optional): Ancho de cada unidad de tiempo. Defaults to 30.
-            process_height (int, optional): Alto de cada proceso. Defaults to 30.
-        """
+        #Inicializa el componente para el diagrama de Gantt.
+
         super().__init__(parent)
         self.parent = parent
         self.width = width
@@ -43,8 +19,8 @@ class GanttChart(ttk.Frame):
         self.unit_width = unit_width
         self.process_height = process_height
         self.colors = {}
-        self.block_counter = 0  # Contador para identificar bloques únicamente
-        
+        self.block_counter = 0 
+
         # Configurar el frame
         self.pack(fill=tk.BOTH, expand=True)
         
@@ -94,13 +70,7 @@ class GanttChart(ttk.Frame):
         self._draw_timeline(0, 10)
     
     def set_execution_history(self, execution_history, max_time=None):
-        """
-        Establece el historial de ejecución completo para animarlo.
-        
-        Args:
-            execution_history (list): Historial completo de ejecución
-            max_time (int, optional): Tiempo máximo a mostrar. Si es None, se calcula.
-        """
+        #Establece el historial de ejecución completo para animarlo.
         self.execution_history = execution_history
         
         # Calcular tiempo máximo si no se proporciona
@@ -127,13 +97,7 @@ class GanttChart(ttk.Frame):
         self._draw_timeline(0, self.max_time)
     
     def animate_execution(self, speed=1.0, callback=None):
-        """
-        Anima la ejecución de los procesos paso a paso.
-        
-        Args:
-            speed (float, optional): Velocidad de la animación. Defaults to 1.0.
-            callback (callable, optional): Función a llamar al finalizar. Defaults to None.
-        """
+        #Anima la ejecución de los procesos paso a paso.
         if not self.execution_history:
             return
         
@@ -234,13 +198,7 @@ class GanttChart(ttk.Frame):
             self.execution_history.extend(new_history)
     
     def _draw_timeline(self, start_time, end_time):
-        """
-        Dibuja la línea de tiempo con marcadores.
-        
-        Args:
-            start_time (int): Tiempo inicial
-            end_time (int): Tiempo final
-        """
+        #Dibuja la línea de tiempo con marcadores.
         # Línea base
         y_pos = self.height - 20
         self.canvas.create_line(
@@ -264,12 +222,8 @@ class GanttChart(ttk.Frame):
             )
     
     def _draw_time_marker(self, time):
-        """
-        Dibuja o actualiza el marcador del tiempo actual.
-        
-        Args:
-            time (int): Tiempo actual
-        """
+        #Dibuja o actualiza el marcador del tiempo actual.
+
         # Borrar marcadores anteriores
         self.canvas.delete("time_marker")
         
@@ -286,12 +240,8 @@ class GanttChart(ttk.Frame):
         self._ensure_visible(time)
     
     def _draw_block_only(self, execution_item):
-        """
-        Dibuja solo el bloque de ejecución sin texto.
-        
-        Args:
-            execution_item (dict): Información del bloque de ejecución
-        """
+        #Dibuja solo el bloque de ejecución sin texto.
+       
         process = execution_item['process']
         start_time = execution_item['start_time']
         end_time = execution_item['end_time']
@@ -324,7 +274,7 @@ class GanttChart(ttk.Frame):
         self._add_tooltip(block_id, f"{pid}: {start_time} -> {end_time}")
     
     def _add_process_labels(self):
-        """Añade etiquetas de texto para cada proceso una sola vez."""
+        #Añade etiquetas de texto para cada proceso una sola vez.
         # Encontrar todos los procesos únicos
         process_ids = set()
         for item in self.execution_history:
@@ -347,13 +297,8 @@ class GanttChart(ttk.Frame):
             )
     
     def _add_tooltip(self, item_id, text):
-        """
-        Añade un tooltip a un elemento del canvas.
+        #Añade un tooltip a un elemento del canvas.
         
-        Args:
-            item_id: ID del elemento
-            text (str): Texto del tooltip
-        """
         tooltip = None
         
         def show_tooltip(event):
@@ -375,12 +320,8 @@ class GanttChart(ttk.Frame):
         self.canvas.tag_bind(item_id, "<Leave>", hide_tooltip)
     
     def _ensure_visible(self, time):
-        """
-        Asegura que el tiempo indicado sea visible en el canvas.
+        #Asegura que el tiempo indicado sea visible en el canvas.
         
-        Args:
-            time (int): Tiempo a mostrar
-        """
         canvas_width = self.canvas.winfo_width()
         content_width = self.max_time * self.unit_width
         
@@ -404,12 +345,7 @@ class GanttChart(ttk.Frame):
                 self._assign_color(pid)
     
     def _assign_color(self, pid):
-        """
-        Asigna un color a un proceso específico.
-        
-        Args:
-            pid (str): ID del proceso
-        """
+        #Asigna un color a un proceso específico.
         # Colores pastel predefinidos
         pastel_colors = [
             "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",

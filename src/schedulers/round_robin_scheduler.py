@@ -1,42 +1,29 @@
-"""
-Módulo que contiene la implementación del algoritmo de calendarización Round Robin
-"""
+#Módulo que contiene la implementación del algoritmo de calendarización Round Robin
 
 from collections import deque
 from src.schedulers.base_scheduler import BaseScheduler
 
 class RoundRobinScheduler(BaseScheduler):
-    """
-    Implementación del algoritmo de calendarización Round Robin.
-    Cada proceso se ejecuta por un quantum de tiempo, luego cede el CPU al siguiente proceso.
-    """
+    #Implementación del algoritmo de calendarización Round Robin.
+    #Cada proceso se ejecuta por un quantum de tiempo, luego cede el CPU al siguiente proceso.
     
     def __init__(self, quantum=2):
-        """
-        Inicializa un nuevo calendarizador Round Robin.
-        
-        Args:
-            quantum (int, optional): Quantum de tiempo para cada proceso. Defaults to 2.
-        """
+        #Inicializa un nuevo calendarizador Round Robin.
+        super().__init__("Round Robin")
+        self.quantum = quantum
+        self.quantum_remaining = quantum  # Inicializar quantum restante
+        self.process_queue = deque()
         super().__init__("Round Robin")
         self.quantum = quantum
         self.quantum_remaining = quantum  # Inicializar quantum restante
         self.process_queue = deque()
     
     def set_quantum(self, quantum):
-        """
-        Establece el quantum de tiempo para el algoritmo.
-        
-        Args:
-            quantum (int): Nuevo quantum de tiempo
-        """
+        #Establece el quantum de tiempo para el algoritmo.
         self.quantum = int(quantum)
     
     def update_queues(self):
-        """
-        Actualiza las colas de procesos basado en el tiempo actual.
-        Agrega a la process_queue los procesos que han llegado al sistema.
-        """
+        #Actualiza las colas de procesos basado en el tiempo actual.
         # Agregar procesos recién llegados en orden de llegada
         nuevos_procesos = []
         
@@ -58,12 +45,8 @@ class RoundRobinScheduler(BaseScheduler):
                 self.ready_queue.append(process)
     
     def get_next_process(self):
-        """
-        Obtiene el siguiente proceso a ejecutar según el algoritmo Round Robin.
-        
-        Returns:
-            Process: El siguiente proceso a ejecutar o None si no hay procesos disponibles
-        """
+        #Obtiene el siguiente proceso a ejecutar según el algoritmo Round Robin.
+        # En Round Robin, tomamos el siguiente proceso de la cola circular
         # En Round Robin, tomamos el siguiente proceso de la cola circular
         if self.process_queue:
             next_process = self.process_queue.popleft()
@@ -73,12 +56,7 @@ class RoundRobinScheduler(BaseScheduler):
         return None
     
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación para Round Robin.
-        
-        Returns:
-            bool: True si la simulación debe continuar, False si ha terminado
-        """
+        #Ejecuta un ciclo de la simulación para Round Robin.
         try:
             # Actualizar colas con nuevos procesos que llegaron en este ciclo
             self.update_queues()

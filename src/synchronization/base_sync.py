@@ -1,29 +1,10 @@
-"""
-Módulo que contiene la clase base para los mecanismos de sincronización
-"""
+#Módulo que contiene la clase base para los mecanismos de sincronización
 
 class BaseSynchronization:
-    """
-    Clase base que define la interfaz común para los mecanismos de sincronización.
-    
-    Attributes:
-        name (str): Nombre del mecanismo de sincronización
-        processes (dict): Diccionario de procesos por PID
-        resources (dict): Diccionario de recursos por nombre
-        actions (list): Lista de acciones ordenadas por ciclo
-        current_time (int): Tiempo actual de la simulación
-        execution_history (list): Historial de ejecución
-        completed_actions (list): Acciones que han completado su ejecución
-        pending_actions (list): Acciones pendientes por ejecutar
-    """
+    #Clase base que define la interfaz común para los mecanismos de sincronización.
     
     def __init__(self, name):
-        """
-        Inicializa un nuevo mecanismo de sincronización.
-        
-        Args:
-            name (str): Nombre del mecanismo
-        """
+        #Inicializa un nuevo mecanismo de sincronización.
         self.name = name
         self.processes = {}  # Procesos por PID
         self.resources = {}  # Recursos por nombre
@@ -34,40 +15,20 @@ class BaseSynchronization:
         self.pending_actions = []
         
     def load_processes(self, processes):
-        """
-        Carga una lista de procesos.
-        
-        Args:
-            processes (list): Lista de procesos a cargar
-        """
+        #Carga una lista de procesos.
         self.processes = {process.pid: process for process in processes}
     
     def load_resources(self, resources):
-        """
-        Carga una lista de recursos.
-        
-        Args:
-            resources (list): Lista de recursos a cargar
-        """
+        #Carga una lista de recursos.
         self.resources = {resource.name: resource for resource in resources}
     
     def load_actions(self, actions):
-        """
-        Carga una lista de acciones.
-        
-        Args:
-            actions (list): Lista de acciones a cargar
-        """
+        #Carga una lista de acciones.
         self.actions = sorted(actions, key=lambda a: a.cycle)
         self.pending_actions = self.actions.copy()
     
     def get_due_actions(self):
-        """
-        Obtiene las acciones que deben ejecutarse en el ciclo actual.
-        
-        Returns:
-            list: Lista de acciones que deben ejecutarse
-        """
+        #Obtiene las acciones que deben ejecutarse en el ciclo actual.
         due_actions = []
         for action in self.pending_actions[:]:
             if action.is_due(self.current_time):
@@ -76,25 +37,11 @@ class BaseSynchronization:
         return due_actions
     
     def process_action(self, action):
-        """
-        Procesa una acción según el mecanismo de sincronización.
-        Debe ser implementado por las clases hijas.
-        
-        Args:
-            action: Acción a procesar
-            
-        Returns:
-            bool: True si la acción se ejecutó con éxito, False si está esperando
-        """
+        #Procesa una acción según el mecanismo de sincronización.
         raise NotImplementedError("Las clases hijas deben implementar este método")
     
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación.
-        
-        Returns:
-            dict: Estado del ciclo actual
-        """
+        #Ejecuta un ciclo de la simulación.
         # Obtener acciones a ejecutar en este ciclo
         due_actions = self.get_due_actions()
         
@@ -135,15 +82,7 @@ class BaseSynchronization:
         }
     
     def run_simulation(self, max_cycles=100):
-        """
-        Ejecuta la simulación completa.
-        
-        Args:
-            max_cycles (int, optional): Número máximo de ciclos a ejecutar. Defaults to 100.
-            
-        Returns:
-            dict: Resultados de la simulación
-        """
+        #Ejecuta la simulación completa.
         self.reset()
         
         # Ejecutar la simulación hasta que termine o se alcance el máximo de ciclos
@@ -155,12 +94,7 @@ class BaseSynchronization:
         return self.get_results()
     
     def get_results(self):
-        """
-        Obtiene los resultados de la simulación.
-        
-        Returns:
-            dict: Resultados de la simulación
-        """
+        #Obtiene los resultados de la simulación.
         return {
             'mechanism': self.name,
             'total_time': self.current_time,
@@ -170,9 +104,7 @@ class BaseSynchronization:
         }
     
     def reset(self):
-        """
-        Reinicia la simulación.
-        """
+        #Reinicia la simulación.
         self.current_time = 0
         self.execution_history = []
         self.completed_actions = []

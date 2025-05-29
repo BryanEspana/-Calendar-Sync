@@ -1,29 +1,16 @@
-"""
-Módulo que contiene la implementación del mecanismo de sincronización Mutex
-"""
+#Módulo que contiene la implementación del mecanismo de sincronización Mutex
 
 from src.synchronization.base_sync import BaseSynchronization
 
 class MutexSynchronization(BaseSynchronization):
-    """
-    Implementación del mecanismo de sincronización Mutex.
-    En este mecanismo, solo un proceso puede acceder a un recurso a la vez.
-    """
+    #Implementación del mecanismo de sincronización Mutex.
     
     def __init__(self):
-        """Inicializa un nuevo mecanismo de sincronización Mutex."""
+        #Inicializa un nuevo mecanismo de sincronización Mutex.
         super().__init__("Mutex")
     
     def process_action(self, action):
-        """
-        Procesa una acción según el mecanismo de sincronización Mutex.
-        
-        Args:
-            action: Acción a procesar
-            
-        Returns:
-            bool: True si la acción se ejecutó con éxito, False si está esperando
-        """
+        #Procesa una acción según el mecanismo de sincronización Mutex.
         # Obtener el recurso asociado a la acción
         resource = self.resources.get(action.resource_name)
         if not resource:
@@ -65,12 +52,7 @@ class MutexSynchronization(BaseSynchronization):
             return False
     
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación para Mutex.
-        
-        Returns:
-            dict: Estado del ciclo actual
-        """
+        #Ejecuta un ciclo de la simulación para Mutex.
         # Registrar el estado antes de ejecutar el ciclo para visualización
         cycle_actions = []
         

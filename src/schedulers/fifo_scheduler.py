@@ -1,24 +1,16 @@
-"""
-Módulo que contiene la implementación del algoritmo de calendarización FIFO (First In First Out)
-"""
+#Módulo que contiene la implementación del algoritmo de calendarización FIFO (First In First Out)
 
 from src.schedulers.base_scheduler import BaseScheduler
 
 class FIFOScheduler(BaseScheduler):
-    """
-    Implementación del algoritmo de calendarización FIFO (First In First Out).
-    Los procesos se ejecutan en el orden en que llegan al sistema.
-    """
+    #Implementación del algoritmo de calendarización FIFO (First In First Out).
     
     def __init__(self):
-        """Inicializa un nuevo calendarizador FIFO."""
+        #Inicializa un nuevo calendarizador FIFO.
         super().__init__("FIFO")
     
     def update_queues(self):
-        """
-        Actualiza las colas de procesos basado en el tiempo actual.
-        Agrega a la ready_queue los procesos que han llegado al sistema.
-        """
+        #Actualiza las colas de procesos basado en el tiempo actual.
         for process in self.processes:
             # Si el proceso ha llegado y no está en ninguna cola ni ha terminado
             if (process.arrival_time <= self.current_time and 
@@ -31,12 +23,7 @@ class FIFOScheduler(BaseScheduler):
         self.ready_queue.sort(key=lambda p: (p.arrival_time, self.processes.index(p)))
     
     def get_next_process(self):
-        """
-        Obtiene el siguiente proceso a ejecutar según el algoritmo FIFO.
-        
-        Returns:
-            Process: El siguiente proceso a ejecutar o None si no hay procesos disponibles
-        """
+        #Obtiene el siguiente proceso a ejecutar según el algoritmo FIFO.
         # En FIFO, simplemente tomamos el primer proceso de la cola
         if self.ready_queue:
             next_process = self.ready_queue[0]
@@ -47,12 +34,7 @@ class FIFOScheduler(BaseScheduler):
         return None
         
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación para FIFO con mejor manejo de errores.
-        
-        Returns:
-            bool: True si la simulación debe continuar, False si ha terminado
-        """
+        #Ejecuta un ciclo de la simulación para FIFO con mejor manejo de errores.
         try:
             # Actualizar colas con nuevos procesos que llegaron en este ciclo
             self.update_queues()

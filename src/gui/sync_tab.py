@@ -1,6 +1,4 @@
-"""
-Módulo que contiene la clase SyncTab para la pestaña del simulador de mecanismos de sincronización
-"""
+#Módulo que contiene la clase SyncTab para la pestaña del simulador de mecanismos de sincronización
 
 import os
 import tkinter as tk
@@ -17,26 +15,10 @@ from src.utils.file_loader import load_processes_file, load_resources_file, load
 from src.gui.gantt_chart import GanttChart
 
 class SyncTab:
-    """
-    Clase que maneja la pestaña del simulador de mecanismos de sincronización.
-    
-    Attributes:
-        parent: Widget padre (pestaña)
-        processes (dict): Diccionario de procesos cargados por PID
-        resources (dict): Diccionario de recursos cargados por nombre
-        actions (list): Lista de acciones cargadas
-        mechanisms (dict): Diccionario de mecanismos de sincronización
-        current_mechanism: Mecanismo seleccionado actualmente
-        gantt_chart: Componente para visualizar el diagrama de acciones
-    """
+    #Clase que maneja la pestaña del simulador de mecanismos de sincronización.
     
     def __init__(self, parent):
-        """
-        Inicializa la pestaña del simulador de mecanismos de sincronización.
-        
-        Args:
-            parent: Widget padre (frame de la pestaña)
-        """
+        #Inicializa la pestaña del simulador de mecanismos de sincronización.
         self.parent = parent
         self.processes = {}
         self.resources = {}
@@ -182,12 +164,7 @@ class SyncTab:
         scrollbar_a.pack(side=tk.RIGHT, fill=tk.Y)
     
     def _on_mechanism_change(self, event):
-        """
-        Maneja el cambio de mecanismo seleccionado.
-        
-        Args:
-            event: Evento que desencadenó la función
-        """
+        #Maneja el cambio de mecanismo seleccionado.
         mechanism_name = self.mechanism_var.get()
         self.current_mechanism = self.mechanisms[mechanism_name]
     
@@ -299,15 +276,7 @@ class SyncTab:
             ))
     
     def _prepare_execution_history(self, results):
-        """
-        Prepara el historial de ejecución para visualizarlo en el diagrama de Gantt.
-        
-        Args:
-            results (dict): Resultados de la simulación
-            
-        Returns:
-            list: Historial de ejecución adaptado para el diagrama de Gantt
-        """
+        #Prepara el historial de ejecución para visualizarlo en el diagrama de Gantt.
         execution_history = []
         
         for cycle_info in results['execution_history']:
@@ -457,15 +426,7 @@ class SyncTab:
             messagebox.showerror("Error en la Simulación", error_msg)
     
     def _build_execution_history_from_actions(self, actions):
-        """
-        Construye un historial de ejecución a partir de las acciones para visualización.
-        
-        Args:
-            actions (list): Lista de acciones
-            
-        Returns:
-            list: Historial de ejecución para el diagrama de Gantt
-        """
+        #Construye un historial de ejecución a partir de las acciones para visualización.
         execution_history = []
         
         # Ordenar acciones por ciclo y proceso
@@ -497,15 +458,7 @@ class SyncTab:
         return execution_history
     
     def _lighten_color(self, hex_color):
-        """
-        Aclara un color hexadecimal para representar estados de espera.
-        
-        Args:
-            hex_color (str): Color hexadecimal (#RRGGBB)
-            
-        Returns:
-            str: Color aclarado
-        """
+        #Aclara un color hexadecimal para representar estados de espera.
         # Convertir hex a RGB
         r = int(hex_color[1:3], 16)
         g = int(hex_color[3:5], 16)

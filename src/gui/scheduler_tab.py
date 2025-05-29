@@ -18,24 +18,10 @@ from src.utils.file_loader import load_processes_file, create_sample_files
 from src.gui.gantt_chart import GanttChart
 
 class SchedulerTab:
-    """
-    Clase que maneja la pestaña del simulador de calendarización.
-    
-    Attributes:
-        parent: Widget padre (pestaña)
-        processes (list): Lista de procesos cargados
-        schedulers (dict): Diccionario de algoritmos de calendarización
-        current_scheduler: Algoritmo seleccionado actualmente
-        gantt_chart: Componente para visualizar el diagrama de Gantt
-    """
+    #Clase que maneja la pestaña del simulador de calendarización.
     
     def __init__(self, parent):
-        """
-        Inicializa la pestaña del simulador de calendarización.
-        
-        Args:
-            parent: Widget padre (frame de la pestaña)
-        """
+        #Inicializa la pestaña del simulador de calendarización.
         self.parent = parent
         self.processes = []
         
@@ -149,12 +135,7 @@ class SchedulerTab:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
     
     def _on_algorithm_change(self, event):
-        """
-        Maneja el cambio de algoritmo seleccionado.
-        
-        Args:
-            event: Evento que desencadenó la función
-        """
+        #Maneja el cambio de algoritmo seleccionado.
         algorithm_name = self.algorithm_var.get()
         self.current_scheduler = self.schedulers[algorithm_name]
         
@@ -163,12 +144,7 @@ class SchedulerTab:
             self.quantum_var.set(str(self.schedulers["Round Robin"].quantum))
         
     def _on_quantum_change(self, event):
-        """
-        Maneja el cambio del valor de quantum para Round Robin.
-        
-        Args:
-            event: Evento que desencadenó la función
-        """
+        #Maneja el cambio del valor de quantum para Round Robin.
         try:
             quantum = int(self.quantum_var.get())
             if quantum > 0:
@@ -230,12 +206,7 @@ class SchedulerTab:
             self.processes_tree.tag_configure(process.pid, background=process.color)
     
     def _update_metrics(self, results):
-        """
-        Actualiza las métricas después de ejecutar una simulación.
-        
-        Args:
-            results (dict): Resultados de la simulación
-        """
+        #Actualiza las métricas después de ejecutar una simulación.
         # Actualizar variables de métricas
         self.avg_waiting_time_var.set(f"{results['avg_waiting_time']:.2f}")
         self.avg_turnaround_time_var.set(f"{results['avg_turnaround_time']:.2f}")

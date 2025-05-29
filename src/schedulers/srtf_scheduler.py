@@ -1,26 +1,16 @@
-"""
-Módulo que contiene la implementación del algoritmo de calendarización SRTF (Shortest Remaining Time First)
-"""
+#Módulo que contiene la implementación del algoritmo de calendarización SRTF (Shortest Remaining Time First)
 
 from src.schedulers.base_scheduler import BaseScheduler
 
 class SRTFScheduler(BaseScheduler):
-    """
-    Implementación del algoritmo de calendarización SRTF (Shortest Remaining Time First).
-    Similar al SJF, pero es preemptivo - interrumpe la ejecución si llega un proceso 
-    con menor tiempo restante.
-    """
+    #Implementación del algoritmo de calendarización SRTF (Shortest Remaining Time First).
     
     def __init__(self):
-        """Inicializa un nuevo calendarizador SRTF."""
+        #Inicializa un nuevo calendarizador SRTF.
         super().__init__("SRTF")
     
     def update_queues(self):
-        """
-        Actualiza las colas de procesos basado en el tiempo actual.
-        Agrega a la ready_queue los procesos que han llegado al sistema.
-        """
-        # Agregar procesos recién llegados
+        #Actualiza las colas de procesos basado en el tiempo actual.
         for process in self.processes:
             # Si el proceso ha llegado y no está en ninguna cola ni ha terminado
             if (process.arrival_time <= self.current_time and 
@@ -39,12 +29,7 @@ class SRTFScheduler(BaseScheduler):
         self.ready_queue.sort(key=lambda p: p.remaining_time)
     
     def get_next_process(self):
-        """
-        Obtiene el siguiente proceso a ejecutar según el algoritmo SRTF.
-        
-        Returns:
-            Process: El siguiente proceso a ejecutar o None si no hay procesos disponibles
-        """
+        #Obtiene el siguiente proceso a ejecutar según el algoritmo SRTF.
         # En SRTF, siempre seleccionamos el proceso con menor tiempo restante
         if self.ready_queue:
             return self.ready_queue[0]
@@ -52,13 +37,7 @@ class SRTFScheduler(BaseScheduler):
         return None
     
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación para SRTF.
-        A diferencia de otros algoritmos, SRTF ejecuta en unidades de tiempo de 1.
-        
-        Returns:
-            bool: True si la simulación debe continuar, False si ha terminado
-        """
+        #Ejecuta un ciclo de la simulación para SRTF.
         # Actualizar colas con nuevos procesos que llegaron en este ciclo
         self.update_queues()
         

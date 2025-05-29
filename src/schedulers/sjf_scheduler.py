@@ -1,25 +1,16 @@
-"""
-Módulo que contiene la implementación del algoritmo de calendarización SJF (Shortest Job First)
-"""
+#Módulo que contiene la implementación del algoritmo de calendarización SJF (Shortest Job First)
 
 from src.schedulers.base_scheduler import BaseScheduler
 
 class SJFScheduler(BaseScheduler):
-    """
-    Implementación del algoritmo de calendarización SJF (Shortest Job First).
-    Los procesos se ejecutan en orden de menor a mayor tiempo de ejecución.
-    Este es un algoritmo no preemptivo.
-    """
+    #Implementación del algoritmo de calendarización SJF (Shortest Job First).
     
     def __init__(self):
-        """Inicializa un nuevo calendarizador SJF."""
+        #Inicializa un nuevo calendarizador SJF.
         super().__init__("SJF")
     
     def update_queues(self):
-        """
-        Actualiza las colas de procesos basado en el tiempo actual.
-        Agrega a la ready_queue los procesos que han llegado al sistema.
-        """
+        #Actualiza las colas de procesos basado en el tiempo actual.
         for process in self.processes:
             # Si el proceso ha llegado y no está en ninguna cola ni ha terminado
             if (process.arrival_time <= self.current_time and 
@@ -33,13 +24,7 @@ class SJFScheduler(BaseScheduler):
         self.ready_queue.sort(key=lambda p: (p.burst_time, p.arrival_time, self.processes.index(p)))
     
     def get_next_process(self):
-        """
-        Obtiene el siguiente proceso a ejecutar según el algoritmo SJF.
-        
-        Returns:
-            Process: El siguiente proceso a ejecutar o None si no hay procesos disponibles
-        """
-        # Si hay un proceso en ejecución que aún no termina, continuamos con él
+        #Obtiene el siguiente proceso a ejecutar según el algoritmo SJF.
         # (SJF es no preemptivo)
         if self.current_process and self.current_process.remaining_time > 0:
             return self.current_process
@@ -54,12 +39,7 @@ class SJFScheduler(BaseScheduler):
         return None
         
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación para SJF con mejor manejo de errores.
-        
-        Returns:
-            bool: True si la simulación debe continuar, False si ha terminado
-        """
+        #Ejecuta un ciclo de la simulación para SJF con mejor manejo de errores.
         try:
             # Actualizar colas con nuevos procesos que llegaron en este ciclo
             self.update_queues()

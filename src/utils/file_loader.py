@@ -1,6 +1,4 @@
-"""
-Módulo con funciones para cargar archivos de procesos, recursos y acciones
-"""
+#Módulo con funciones para cargar archivos de procesos, recursos y acciones
 
 import os
 from src.models.process import Process
@@ -8,15 +6,7 @@ from src.models.resource import Resource
 from src.models.action import Action
 
 def load_processes_file(file_path):
-    """
-    Carga procesos desde un archivo de texto.
-    
-    Args:
-        file_path (str): Ruta al archivo de procesos
-        
-    Returns:
-        list: Lista de objetos Process
-    """
+    #Carga procesos desde un archivo de texto.
     processes = []
     
     try:
@@ -37,15 +27,7 @@ def load_processes_file(file_path):
     return processes
 
 def load_resources_file(file_path):
-    """
-    Carga recursos desde un archivo de texto.
-    
-    Args:
-        file_path (str): Ruta al archivo de recursos
-        
-    Returns:
-        list: Lista de objetos Resource
-    """
+    #Carga recursos desde un archivo de texto.
     resources = []
     
     try:
@@ -66,15 +48,7 @@ def load_resources_file(file_path):
     return resources
 
 def load_actions_file(file_path):
-    """
-    Carga acciones desde un archivo de texto.
-    
-    Args:
-        file_path (str): Ruta al archivo de acciones
-        
-    Returns:
-        list: Lista de objetos Action
-    """
+    #Carga acciones desde un archivo de texto.
     actions = []
     
     try:
@@ -95,12 +69,7 @@ def load_actions_file(file_path):
     return actions
 
 def create_sample_files(directory):
-    """
-    Crea archivos de ejemplo para procesos, recursos y acciones.
-    
-    Args:
-        directory (str): Directorio donde se crearán los archivos
-    """
+    #Crea archivos de ejemplo para procesos, recursos y acciones.
     if not os.path.exists(directory):
         os.makedirs(directory)
     

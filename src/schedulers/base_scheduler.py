@@ -3,18 +3,7 @@ Módulo que contiene la clase base para los algoritmos de calendarización
 """
 
 class BaseScheduler:
-    """
-    Clase base que define la interfaz común para todos los algoritmos de calendarización.
-    
-    Attributes:
-        name (str): Nombre del algoritmo
-        processes (list): Lista de procesos a calendarizar
-        current_time (int): Tiempo actual de la simulación
-        execution_history (list): Historial de ejecución (para diagrama de Gantt)
-        completed_processes (list): Procesos que han completado su ejecución
-        ready_queue (list): Cola de procesos listos para ejecutar
-    """
-    
+    #Clase base que define la interfaz común para todos los algoritmos de calendarización.
     def __init__(self, name):
         """
         Inicializa un nuevo calendarizador.
@@ -31,48 +20,26 @@ class BaseScheduler:
         self.current_process = None
     
     def add_process(self, process):
-        """
-        Añade un proceso a la lista de procesos.
-        
-        Args:
-            process: Proceso a añadir
-        """
+        #Añade un proceso a la lista de procesos.
         self.processes.append(process)
     
     def load_processes(self, processes):
-        """
-        Carga una lista de procesos.
-        
-        Args:
-            processes (list): Lista de procesos a cargar
-        """
+        #Carga una lista de procesos.
+        self.processes = processes.copy()
+        self.reset()
         self.processes = processes.copy()
         self.reset()
     
     def update_queues(self):
-        """
-        Actualiza las colas de procesos basado en el tiempo actual.
-        Debe ser implementado por las clases hijas.
-        """
+        #Actualiza las colas de procesos basado en el tiempo actual.
         raise NotImplementedError("Las clases hijas deben implementar este método")
     
     def get_next_process(self):
-        """
-        Obtiene el siguiente proceso a ejecutar según el algoritmo.
-        Debe ser implementado por las clases hijas.
-        
-        Returns:
-            Process: El siguiente proceso a ejecutar o None si no hay procesos disponibles
-        """
+        #Obtiene el siguiente proceso a ejecutar según el algoritmo.
         raise NotImplementedError("Las clases hijas deben implementar este método")
     
     def execute_cycle(self):
-        """
-        Ejecuta un ciclo de la simulación.
-        
-        Returns:
-            bool: True si la simulación debe continuar, False si ha terminado
-        """
+        #Ejecuta un ciclo de la simulación.
         # Actualizar colas con nuevos procesos que llegaron en este ciclo
         self.update_queues()
         
@@ -120,12 +87,14 @@ class BaseScheduler:
         return len(self.completed_processes) < len(self.processes)
     
     def run_simulation(self):
-        """
-        Ejecuta la simulación completa.
+        #Ejecuta la simulación completa.
+        self.reset()
         
-        Returns:
-            dict: Resultados de la simulación
-        """
+        # Ejecutar la simulación hasta que termine
+        while self.execute_cycle():
+            pass
+        
+        return self.get_results()
         self.reset()
         
         # Ejecutar la simulación hasta que termine
@@ -135,12 +104,21 @@ class BaseScheduler:
         return self.get_results()
     
     def get_results(self):
-        """
-        Obtiene los resultados de la simulación.
+        #Obtiene los resultados de la simulación.
+        total_waiting_time = sum(p.waiting_time for p in self.processes)
+        avg_waiting_time = total_waiting_time / len(self.processes) if self.processes else 0
         
-        Returns:
-            dict: Resultados de la simulación
-        """
+        total_turnaround_time = sum(p.turnaround_time for p in self.processes)
+        avg_turnaround_time = total_turnaround_time / len(self.processes) if self.processes else 0
+        
+        return {
+            'algorithm': self.name,
+            'total_time': self.current_time,
+            'processes': self.processes,
+            'execution_history': self.execution_history,
+            'avg_waiting_time': avg_waiting_time,
+            'avg_turnaround_time': avg_turnaround_time,
+        }
         total_waiting_time = sum(p.waiting_time for p in self.processes)
         avg_waiting_time = total_waiting_time / len(self.processes) if self.processes else 0
         
@@ -157,9 +135,7 @@ class BaseScheduler:
         }
     
     def reset(self):
-        """
-        Reinicia la simulación.
-        """
+        #Reinicia la simulación.
         self.current_time = 0
         self.execution_history = []
         self.completed_processes = []

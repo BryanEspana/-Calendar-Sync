@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Aplicación principal del simulador Calendar & Sync
-"""
+#Aplicación principal del simulador Calendar & Sync
 
 import os
 import sys
@@ -19,14 +17,11 @@ from src.gui.sync_tab import SyncTab
 from src.utils.file_loader import create_sample_files
 
 class CalendarSyncApp:
-    """Clase principal de la aplicación Calendar & Sync"""
+    #Clase principal de la aplicación Calendar & Sync
     
     def __init__(self, root):
-        """Inicializa la aplicación
+        #Inicializa la aplicación
         
-        Args:
-            root: Ventana principal de tkinter
-        """
         self.root = root
         self.root.title("Calendar & Sync - Simulador")
         self.root.geometry("1024x768")
@@ -63,13 +58,13 @@ class CalendarSyncApp:
         self._ensure_data_directory()
 
     def _ensure_data_directory(self):
-        """Crea el directorio de datos si no existe."""
+        #Crea el directorio de datos si no existe.
         data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
 
 def main():
-    """Función principal que inicia la aplicación"""
+    #Función principal que inicia la aplicación
     root = tk.Tk()
     app = CalendarSyncApp(root)
     root.mainloop()
