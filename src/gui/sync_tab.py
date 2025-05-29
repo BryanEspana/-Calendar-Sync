@@ -80,7 +80,7 @@ class SyncTab:
         gantt_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Crear el componente de diagrama de Gantt para visualizar las acciones
-        self.gantt_chart = GanttChart(gantt_frame)
+        self.gantt_chart = GanttChart(gantt_frame, width=1200, height=600, unit_width=80, process_height=60)
         
         # En lugar de pack, usamos grid para el componente gantt_chart
         # ya que internamente GanttChart usa grid para sus componentes
@@ -344,7 +344,7 @@ class SyncTab:
                     child.destroy()
                 
                 # Crear un nuevo componente de diagrama de Gantt
-                self.gantt_chart = GanttChart(visualization_frame)
+                self.gantt_chart = GanttChart(visualization_frame, width=1200, height=600, unit_width=80, process_height=60)
                 
                 # Construir el historial de ejecución basado en las acciones simuladas
                 execution_history = self._build_execution_history_from_actions(self.actions)
@@ -358,45 +358,197 @@ class SyncTab:
                 self.gantt_chart.clear()
                 self.gantt_chart._draw_timeline(0, max_time)
                 
-                # Dibujar cada bloque de ejecución con un tamaño más grande y visible
+                # Organizar recursos y procesos
+                process_rows = {}  # Mapeo de ID de proceso a fila
+                resource_rows = {}  # Mapeo de nombre de recurso a fila
+                
+                # Primero, recopilar todos los procesos y recursos únicos
+                processes = set()
+                resources = set()
+                
                 for item in execution_history:
-                    process = item['process']
-                    start_time = item['start_time']
-                    end_time = item['end_time']
-                    state = item['state']
+                    if 'is_resource' in item and item['is_resource']:
+                        resources.add(item['resource_name'])
+                    elif 'is_process_action' in item and item['is_process_action']:
+                        processes.add(item['process'].pid)
+                
+                # Si no hay procesos en el historial (no hay acciones detectadas), usar los procesos cargados
+                if not processes and self.processes:
+                    for pid in self.processes.keys():
+                        processes.add(pid)
+                
+                # Asignar filas - primero recursos, luego procesos
+                row = 0
+                
+                # Crear encabezado para recursos en el área fija
+                header_y = 40
+                self.gantt_chart.canvas.create_text(
+                    self.gantt_chart.label_width/2, header_y, text="RECURSOS", 
+                    font=("Arial", 18, "bold"), anchor="center", fill="black",
+                    tags="fixed_header"
+                )
+                
+                resource_start_y = 70  # Posición inicial de los recursos
+                row = 0
+                for resource in sorted(resources):
+                    resource_rows[resource] = row
+                    y_pos = resource_start_y + row * 70
                     
-                    # Obtener o asignar color al proceso
-                    if not hasattr(process, 'color') or not process.color:
-                        # Colores pastel predefinidos
-                        pastel_colors = [
-                            "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",
-                            "#FFDAB9", "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
-                        ]
-                        pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else hash(process.pid) % 10
-                        process.color = pastel_colors[pid_index % len(pastel_colors)]
-                    
-                    # Determinar posición vertical basada en el ID del proceso
-                    pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else 0
-                    y_pos = 30 + pid_index * 30
-                    
-                    # Dibujar el bloque con borde negro y color de relleno
-                    x1 = start_time * self.gantt_chart.unit_width
-                    x2 = end_time * self.gantt_chart.unit_width
-                    y1 = y_pos
-                    y2 = y_pos + 25
-                    
-                    # Ajustar color según el estado
-                    block_color = process.color
-                    if state == "WAITING":
-                        # Usar un tono más claro para estados de espera
-                        block_color = self._lighten_color(block_color)
-                    
-                    # Crear rectángulo con borde más grueso
-                    block_id = self.gantt_chart.canvas.create_rectangle(
-                        x1, y1, x2, y2, 
-                        fill=block_color, outline="black", width=2,
-                        tags=f"block_{process.pid}_{start_time}_{end_time}"
+                    # Crear etiqueta del recurso en la columna fija
+                    self.gantt_chart.canvas.create_text(
+                        self.gantt_chart.label_width/2, y_pos + 25, 
+                        text=resource, font=("Arial", 16, "bold"), 
+                        anchor="center", fill="black", tags="fixed_label"
                     )
+                    row += 1
+                
+                # Calcular posición para el encabezado de procesos
+                process_start_y = resource_start_y + (len(resources) * 70) + 50
+                
+                # Crear encabezado para procesos con un poco de espacio
+                self.gantt_chart.canvas.create_text(
+                    self.gantt_chart.label_width/2, process_start_y - 30, text="PROCESOS", 
+                    font=("Arial", 18, "bold"), anchor="center", fill="black",
+                    tags="fixed_header"
+                )
+                
+                # Asignar filas para procesos
+                row = 0
+                for process in sorted(processes):
+                    process_rows[process] = row
+                    y_pos = process_start_y + row * 70
+                    
+                    # Crear etiqueta del proceso en la columna fija
+                    self.gantt_chart.canvas.create_text(
+                        self.gantt_chart.label_width/2, y_pos + 25, 
+                        text=process, font=("Arial", 16, "bold"), 
+                        anchor="center", fill="black", tags="fixed_label"
+                    )
+                    row += 1
+                
+                # Ya hemos asignado las filas para los procesos arriba
+                
+                # Ahora dibujamos cada elemento
+                for item in execution_history:
+                    if 'is_resource' in item and item['is_resource']:
+                        # Dibujar estado del recurso
+                        resource_name = item['resource_name']
+                        start_time = item['start_time']
+                        end_time = item['end_time']
+                        
+                        # Posición vertical basada en la fila asignada
+                        row = resource_rows[resource_name]
+                        y_pos = resource_start_y + row * 70
+                        
+                        # Coordenadas del bloque con desplazamiento para el área de etiquetas
+                        x1 = (start_time * self.gantt_chart.unit_width) + self.gantt_chart.label_width
+                        x2 = (end_time * self.gantt_chart.unit_width) + self.gantt_chart.label_width
+                        y1 = y_pos
+                        y2 = y_pos + 50
+                        
+                        # Color basado en si está en uso o libre
+                        if item['using_processes']:
+                            # Recurso en uso
+                            block_color = "#FFDAB9"  # Color para recurso en uso
+                            # Agregar borde más grueso si hay procesos esperando
+                            border_width = 3 if item['waiting_processes'] else 1
+                            border_color = "red" if item['waiting_processes'] else "black"
+                        else:
+                            # Recurso libre
+                            block_color = "#98FB98"  # Color para recurso libre
+                            border_width = 1
+                            border_color = "black"
+                        
+                        # Crear rectángulo para el recurso
+                        block_id = self.gantt_chart.canvas.create_rectangle(
+                            x1, y1, x2, y2, 
+                            fill=block_color, outline=border_color, width=border_width,
+                            tags=f"resource_{resource_name}_{start_time}"
+                        )
+                        
+                        # No necesitamos crear etiquetas a la izquierda, ya las creamos antes
+                        
+                        # Texto dentro del bloque
+                        using_text = item['display_text']
+                        self.gantt_chart.canvas.create_text(
+                            (x1 + x2) / 2, (y1 + y2) / 2, 
+                            text=using_text, 
+                            font=("Arial", 14, "bold"), 
+                            fill="black"
+                        )
+                        
+                        # Si hay procesos esperando, mostrar indicador
+                        if item['waiting_processes']:
+                            waiting_text = f"Esperando: {', '.join(item['waiting_processes'])}"
+                            self.gantt_chart.canvas.create_text(
+                                (x1 + x2) / 2, y2 + 15, 
+                                text=waiting_text, 
+                                font=("Arial", 14), 
+                                fill="red"
+                            )
+                    
+                    elif 'is_process_action' in item and item['is_process_action']:
+                        # Dibujar acciones de procesos
+                        process = item['process']
+                        start_time = item['start_time']
+                        end_time = item['end_time']
+                        state = item['state']
+                        
+                        # Obtener o asignar color al proceso
+                        if not hasattr(process, 'color') or not process.color:
+                            # Colores predefinidos
+                            process_colors = [
+                                "#FFB6C1", "#FFD700", "#87CEFA", "#DDA0DD",
+                                "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
+                            ]
+                            pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else hash(process.pid) % 8
+                            process.color = process_colors[pid_index % len(process_colors)]
+                        
+                        # Posición vertical basada en la fila asignada
+                        row = process_rows[process.pid]
+                        y_pos = process_start_y + row * 70
+                        
+                        # Coordenadas del bloque con desplazamiento para el área de etiquetas
+                        x1 = (start_time * self.gantt_chart.unit_width) + self.gantt_chart.label_width
+                        x2 = (end_time * self.gantt_chart.unit_width) + self.gantt_chart.label_width
+                        y1 = y_pos
+                        y2 = y_pos + 50
+                        
+                        # Ajustar color según el estado
+                        block_color = process.color
+                        if state == "WAITING":
+                            # Usar un tono más claro para estados de espera
+                            block_color = self._lighten_color(block_color)
+                            border_color = "red"
+                        else:
+                            border_color = "black"
+                        
+                        # Crear rectángulo con borde más grueso
+                        block_id = self.gantt_chart.canvas.create_rectangle(
+                            x1, y1, x2, y2, 
+                            fill=block_color, outline=border_color, width=2,
+                            tags=f"block_{process.pid}_{start_time}_{end_time}"
+                        )
+                        
+                        # No necesitamos crear etiquetas a la izquierda, ya las creamos antes
+                        
+                        # Mostrar el ID del proceso en el bloque (como en calendarización)
+                        self.gantt_chart.canvas.create_text(
+                            (x1 + x2) / 2, (y1 + y2) / 2, 
+                            text=process.pid, 
+                            font=("Arial", 14, "bold"), 
+                            fill="black"
+                        )
+                        
+                        # Mostrar acción ejecutada debajo del proceso
+                        action_info = item['action']
+                        action_text = f"{action_info.action_type} {action_info.resource_name}"
+                        self.gantt_chart.canvas.create_text(
+                            (x1 + x2) / 2, y2 + 15, 
+                            text=action_text, 
+                            font=("Arial", 12), 
+                            fill="#333333"
+                        )
                     
                     # Añadir texto del proceso en el bloque si hay suficiente espacio
                     block_width = x2 - x1
@@ -411,7 +563,22 @@ class SyncTab:
                 # Añadir etiquetas para los procesos al lado izquierdo
                 # NOTA: Se han eliminado las etiquetas de texto a petición del usuario
                 
-                # Actualizar el canvas
+                # Ajustar la región de desplazamiento del canvas para mostrar todo el contenido
+                total_rows = len(processes) + len(resources) + 2  # +2 para los encabezados
+                canvas_height = process_start_y + (len(processes) * 70) + 50  # altura adicional para márgenes
+                
+                # Definir la región de desplazamiento incluyendo el área de etiquetas
+                self.gantt_chart.canvas.config(scrollregion=(0, 0, 
+                                                           (max_time * self.gantt_chart.unit_width) + self.gantt_chart.label_width + 150, 
+                                                           canvas_height))
+                
+                # Crear una línea vertical para separar el área de etiquetas y el área de bloques
+                self.gantt_chart.canvas.create_line(
+                    self.gantt_chart.label_width, 0, 
+                    self.gantt_chart.label_width, canvas_height,
+                    fill="gray", width=2, tags="separator_line"
+                )
+                
                 self.gantt_chart.canvas.update()
             
             # Mostrar un mensaje de confirmación
@@ -426,35 +593,113 @@ class SyncTab:
             messagebox.showerror("Error en la Simulación", error_msg)
     
     def _build_execution_history_from_actions(self, actions):
-        #Construye un historial de ejecución a partir de las acciones para visualización.
+        """Construye un historial de ejecución a partir de las acciones para visualización."""
         execution_history = []
         
         # Ordenar acciones por ciclo y proceso
         actions_sorted = sorted(actions, key=lambda a: (a.cycle, a.pid))
         
-        # Generar entradas para el historial de ejecución
+        # Encontrar el ciclo máximo para dimensionar nuestras estructuras de datos
+        max_cycle = max([a.cycle for a in actions_sorted]) if actions_sorted else 5
+        
+        # Crear un diccionario para mantener el estado de los recursos por ciclo
+        resources_state = {}
+        
+        # Inicializar el estado de los recursos en cada ciclo
+        for cycle in range(max_cycle + 2):  # +1 para incluir el último ciclo, +1 para el fin de la última acción
+            for resource_name, resource in self.resources.items():
+                key = (resource_name, cycle)
+                
+                # Estado inicial del recurso
+                if cycle == 0:
+                    resources_state[key] = {
+                        'resource_name': resource_name,
+                        'start_time': cycle,
+                        'end_time': cycle + 1,
+                        'using_processes': [],
+                        'waiting_processes': [],
+                        'is_resource': True,
+                        'display_text': 'Libre'
+                    }
+                else:
+                    # Copiar el estado del ciclo anterior
+                    prev_key = (resource_name, cycle - 1)
+                    prev_state = resources_state.get(prev_key)
+                    
+                    # Si no existe estado anterior, crear uno por defecto
+                    if not prev_state:
+                        prev_state = {
+                            'resource_name': resource_name,
+                            'using_processes': [],
+                            'waiting_processes': [],
+                            'is_resource': True,
+                            'display_text': 'Libre'
+                        }
+                    
+                    # Crear el estado actual como copia del anterior
+                    resources_state[key] = {
+                        'resource_name': resource_name,
+                        'start_time': cycle,
+                        'end_time': cycle + 1,
+                        'using_processes': prev_state['using_processes'][:],  # Copiar lista
+                        'waiting_processes': prev_state['waiting_processes'][:],  # Copiar lista
+                        'is_resource': True,
+                        'display_text': prev_state['display_text']
+                    }
+        
+        # Procesar las acciones para actualizar estados
         for action in actions_sorted:
             process = self.processes.get(action.pid)
             if not process:
                 continue
-                
+            
             # Determinar el estado basado en el estado de la acción
             state = "WAITING"
-            if action.state == "COMPLETED":
-                state = "ACCESSED"
-            elif action.state == "RUNNING":
+            if action.state == "COMPLETED" or action.state == "RUNNING":
                 state = "ACCESSED"
             
-            # Crear la entrada para el historial
+            # Crear la entrada para el historial de la acción del proceso
             entry = {
                 'process': process,
                 'start_time': action.cycle,
                 'end_time': action.cycle + 1,
                 'state': state,
-                'action': action
+                'action': action,
+                'is_process_action': True  # Marcar que es una acción de proceso
             }
             execution_history.append(entry)
             
+            # Actualizar el estado del recurso correspondiente
+            resource_name = action.resource_name
+            cycle = action.cycle
+            key = (resource_name, cycle)
+            
+            if resource_name in self.resources and key in resources_state:
+                resource_state = resources_state[key]
+                
+                # Actualizar el estado según si la acción se completó o está esperando
+                if state == "ACCESSED":
+                    # El proceso accedió al recurso
+                    if process.pid not in resource_state['using_processes']:
+                        resource_state['using_processes'].append(process.pid)
+                    
+                    # Actualizar el texto que se mostrará en el bloque
+                    action_type = action.action_type
+                    using_procs = resource_state['using_processes']
+                    resource_state['display_text'] = f"{action_type}: {', '.join(using_procs)}"
+                    
+                    # Quitar de la lista de espera si estaba
+                    if process.pid in resource_state['waiting_processes']:
+                        resource_state['waiting_processes'].remove(process.pid)
+                else:
+                    # El proceso está esperando por el recurso
+                    if process.pid not in resource_state['waiting_processes']:
+                        resource_state['waiting_processes'].append(process.pid)
+        
+        # Añadir todos los estados de recursos al historial
+        for key, state in resources_state.items():
+            execution_history.append(state)
+        
         return execution_history
     
     def _lighten_color(self, hex_color):
