@@ -468,14 +468,45 @@ class SyncTab:
                         
                         # No necesitamos crear etiquetas a la izquierda, ya las creamos antes
                         
-                        # Texto dentro del bloque
+                        # Texto dentro del bloque en formato multilínea
                         using_text = item['display_text']
-                        self.gantt_chart.canvas.create_text(
-                            (x1 + x2) / 2, (y1 + y2) / 2, 
-                            text=using_text, 
-                            font=("Arial", 14, "bold"), 
-                            fill="black"
-                        )
+                        
+                        # Si el texto contiene ':', separarlo en dos líneas
+                        if ':' in using_text:
+                            parts = using_text.split(':', 1)
+                            action_type = parts[0].strip()
+                            processes = parts[1].strip()
+                            
+                            # Dibujar el tipo de acción en la primera línea (más arriba)
+                            self.gantt_chart.canvas.create_text(
+                                (x1 + x2) / 2, (y1 + y2) / 2 - 15, 
+                                text=action_type, 
+                                font=("Arial", 14, "bold"), 
+                                fill="black"
+                            )
+                            
+                            # Dibujar los procesos en la segunda línea (más abajo)
+                            self.gantt_chart.canvas.create_text(
+                                (x1 + x2) / 2, (y1 + y2) / 2 + 15, 
+                                text=processes, 
+                                font=("Arial", 12), 
+                                fill="black"
+                            )
+                        else:
+                            # Si es "Libre", mostrarlo un poco más abajo para evitar superposiciones
+                            y_offset = 0  # Posición vertical predeterminada
+                            
+                            # Si el texto es "Libre", ajustar la posición vertical
+                            if using_text == "Libre":
+                                y_offset = 10
+                                
+                            # Mostrar el texto en el centro con posible ajuste vertical
+                            self.gantt_chart.canvas.create_text(
+                                (x1 + x2) / 2, (y1 + y2) / 2 + y_offset, 
+                                text=using_text, 
+                                font=("Arial", 14, "bold"), 
+                                fill="black"
+                            )
                         
                         # Si hay procesos esperando, mostrar indicador
                         if item['waiting_processes']:
@@ -532,22 +563,22 @@ class SyncTab:
                         
                         # No necesitamos crear etiquetas a la izquierda, ya las creamos antes
                         
-                        # Mostrar el ID del proceso en el bloque (como en calendarización)
+                        # Mostrar el ID del proceso en el bloque (parte superior)
                         self.gantt_chart.canvas.create_text(
-                            (x1 + x2) / 2, (y1 + y2) / 2, 
+                            (x1 + x2) / 2, (y1 + y2) / 2 - 15, 
                             text=process.pid, 
                             font=("Arial", 14, "bold"), 
                             fill="black"
                         )
                         
-                        # Mostrar acción ejecutada debajo del proceso
+                        # Mostrar acción ejecutada dentro del bloque (parte inferior)
                         action_info = item['action']
                         action_text = f"{action_info.action_type} {action_info.resource_name}"
                         self.gantt_chart.canvas.create_text(
-                            (x1 + x2) / 2, y2 + 15, 
+                            (x1 + x2) / 2, (y1 + y2) / 2 + 15, 
                             text=action_text, 
                             font=("Arial", 12), 
-                            fill="#333333"
+                            fill="black"
                         )
                     
                     # Añadir texto del proceso en el bloque si hay suficiente espacio
