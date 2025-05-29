@@ -303,59 +303,109 @@ class SchedulerTab:
                 for child in visualization_frame.winfo_children():
                     child.destroy()
                 
-                # Crear un nuevo componente de diagrama de Gantt
-                self.gantt_chart = GanttChart(visualization_frame)
+                # Crear un nuevo componente de diagrama de Gantt con dimensiones más grandes
+                self.gantt_chart = GanttChart(visualization_frame, width=900, height=400, unit_width=50, process_height=40)
                 
-                # Configurar el nuevo diagrama
-                self.gantt_chart.set_execution_history(results['execution_history'], results['total_time'])
-                
-                # Dibujar claramente los bloques de ejecución
+                # Configurar el diagrama pero sin dibujar nada aún
                 self.gantt_chart.clear()
                 self.gantt_chart._draw_timeline(0, results['total_time'])
                 
-                # Dibujar cada bloque de ejecución con un tamaño más grande y visible
+                # Añadir etiquetas de procesos primero
+                process_ids = set()
                 for item in results['execution_history']:
+                    process_ids.add(item['process'].pid)
+                
+                # Dibujar etiquetas de proceso al lado izquierdo
+                for pid in process_ids:
+                    pid_index = int(pid[1:]) if pid[0].upper() == 'P' and pid[1:].isdigit() else 0
+                    y_pos = 30 + pid_index * 40 + 40/2  # Centrado verticalmente
+                    
+                    self.gantt_chart.canvas.create_text(
+                        15, y_pos,
+                        text=pid, fill="black",
+                        font=("Arial", 12, "bold"),
+                        tags=f"label_{pid}"
+                    )
+                
+                # Asignar colores a los procesos
+                process_colors = {}
+                pastel_colors = [
+                    "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",
+                    "#FFDAB9", "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
+                ]
+                
+                for pid in process_ids:
+                    pid_index = int(pid[1:]) if pid[0].upper() == 'P' and pid[1:].isdigit() else 0
+                    color_index = pid_index % len(pastel_colors)
+                    process_colors[pid] = pastel_colors[color_index]
+                
+                # Ordenar el historial de ejecución por tiempo de inicio
+                sorted_history = sorted(results['execution_history'], key=lambda x: x['start_time'])
+                
+                # Función para animar paso a paso manualmente
+                def animate_step(index=0):
+                    if index >= len(sorted_history):
+                        # Animación terminada
+                        # Usar el after del widget de gantt_chart para mostrar el mensaje
+                        self.gantt_chart.after(200, lambda: messagebox.showinfo(
+                            "Simulación completada", 
+                            f"Simulación completada exitosamente con el algoritmo {self.algorithm_var.get()}.\n\n"
+                            f"Tiempo promedio de espera: {results['avg_waiting_time']:.2f}\n"
+                            f"Tiempo promedio de turnaround: {results['avg_turnaround_time']:.2f}\n"
+                            f"Tiempo total de ejecución: {results['total_time']}"))
+                        return
+                    
+                    # Obtener el siguiente bloque para dibujar
+                    item = sorted_history[index]
                     process = item['process']
                     start_time = item['start_time']
                     end_time = item['end_time']
                     
-                    # Obtener o asignar color al proceso
-                    if not hasattr(process, 'color') or not process.color:
-                        # Colores pastel predefinidos
-                        pastel_colors = [
-                            "#FFB6C1", "#FFD700", "#98FB98", "#87CEFA", "#DDA0DD",
-                            "#FFDAB9", "#B0E0E6", "#FFA07A", "#20B2AA", "#F0E68C"
-                        ]
-                        pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else hash(process.pid) % 10
-                        process.color = pastel_colors[pid_index % len(pastel_colors)]
+                    # Obtener el color del proceso
+                    color = process_colors.get(process.pid, "#CCCCCC")
                     
-                    # Determinar posición vertical
+                    # Calcular posición vertical
                     pid_index = int(process.pid[1:]) if process.pid[0].upper() == 'P' and process.pid[1:].isdigit() else 0
-                    y_pos = 30 + pid_index * 30
+                    y_pos = 30 + pid_index * 40
                     
                     # Dibujar el bloque con borde negro y color de relleno
-                    x1 = start_time * self.gantt_chart.unit_width
-                    x2 = end_time * self.gantt_chart.unit_width
+                    x1 = start_time * self.gantt_chart.unit_width + 30  # Offset para etiquetas
+                    x2 = end_time * self.gantt_chart.unit_width + 30
                     y1 = y_pos
-                    y2 = y_pos + 25
+                    y2 = y_pos + 30
                     
                     # Crear rectángulo con borde más grueso
-                    self.gantt_chart.canvas.create_rectangle(
+                    block_id = self.gantt_chart.canvas.create_rectangle(
                         x1, y1, x2, y2, 
-                        fill=process.color, outline="black", width=2,
-                        tags=f"block_{process.pid}_{start_time}_{end_time}"  # Tag único basado en PID y tiempos
+                        fill=color, outline="black", width=2,
+                        tags=f"block_{process.pid}_{start_time}_{end_time}"
                     )
                     
-                    # Añadir texto del proceso en el bloque con un tag único
-                    # Calcular ancho del bloque para decidir si mostrar texto
+                    # Añadir texto del proceso en el bloque si hay espacio suficiente
                     block_width = x2 - x1
-                    if block_width >= 20:  # Solo mostrar texto si hay suficiente espacio
+                    if block_width >= 20:
                         self.gantt_chart.canvas.create_text(
                             (x1 + x2) / 2, (y1 + y2) / 2, 
                             text=process.pid, fill="black", 
                             font=("Arial", 10, "bold"), 
-                            tags=f"text_{process.pid}_{start_time}_{end_time}"  # Tag único para evitar superposición
+                            tags=f"text_{process.pid}_{start_time}_{end_time}"
                         )
+                    
+                    # Scroll automático para seguir la animación
+                    canvas_width = self.gantt_chart.canvas.winfo_width()
+                    if end_time * self.gantt_chart.unit_width > canvas_width:
+                        self.gantt_chart.canvas.xview_moveto((end_time * self.gantt_chart.unit_width - canvas_width / 2) / 
+                                                      (results['total_time'] * self.gantt_chart.unit_width))
+                    
+                    # Actualizar la interfaz para mostrar el bloque actual
+                    self.parent.update()
+                    
+                    # Programar el siguiente paso con un retraso
+                    delay = 500  # milisegundos entre pasos
+                    self.gantt_chart.after(delay, lambda: animate_step(index + 1))
+                
+                # Iniciar la animación manual
+                self.gantt_chart.after(100, lambda: animate_step(0))
                 
                 # Configurar la región visible del canvas
                 self.gantt_chart.canvas.configure(scrollregion=(0, 0, results['total_time'] * self.gantt_chart.unit_width + 50, 400))
@@ -363,13 +413,6 @@ class SchedulerTab:
                 # Forzar actualización de la interfaz
                 self.parent.update()
                 self.gantt_chart.canvas.update()
-            
-            # Mostrar mensaje de éxito
-            messagebox.showinfo("Simulación completada", 
-                              f"Simulación completada exitosamente con el algoritmo {self.algorithm_var.get()}.\n\n"
-                              f"Tiempo promedio de espera: {results['avg_waiting_time']:.2f}\n"
-                              f"Tiempo promedio de turnaround: {results['avg_turnaround_time']:.2f}\n"
-                              f"Tiempo total de ejecución: {results['total_time']}")
 
             
         except Exception as e:
