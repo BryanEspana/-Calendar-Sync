@@ -407,8 +407,11 @@ class SchedulerTab:
                 # Iniciar la animación manual
                 self.gantt_chart.after(100, lambda: animate_step(0))
                 
-                # Configurar la región visible del canvas
-                self.gantt_chart.canvas.configure(scrollregion=(0, 0, results['total_time'] * self.gantt_chart.unit_width + 50, 400))
+                # Calcular altura total necesaria basada en el número de procesos
+                total_height = max(400, len(process_ids) * 40 + 50)  # 40 es la altura por proceso, 50 es espacio extra
+                
+                # Configurar la región visible del canvas tanto para scroll horizontal como vertical
+                self.gantt_chart.canvas.configure(scrollregion=(0, 0, results['total_time'] * self.gantt_chart.unit_width + 50, total_height))
                 
                 # Forzar actualización de la interfaz
                 self.parent.update()

@@ -48,16 +48,28 @@ class GanttChart(ttk.Frame):
         # Configurar el frame
         self.pack(fill=tk.BOTH, expand=True)
         
-        # Crear el canvas con scrollbar
+        # Crear el canvas con scrollbars horizontal y vertical
         self.canvas_frame = ttk.Frame(self)
         self.canvas_frame.pack(fill=tk.BOTH, expand=True)
         
+        # Crear canvas
         self.canvas = tk.Canvas(self.canvas_frame, width=width, height=height, background="white")
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
         
-        self.scrollbar = ttk.Scrollbar(self.canvas_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
-        self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-        self.canvas.configure(xscrollcommand=self.scrollbar.set)
+        # Scrollbar horizontal
+        self.h_scrollbar = ttk.Scrollbar(self.canvas_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        self.h_scrollbar.grid(row=1, column=0, sticky="ew")
+        
+        # Scrollbar vertical
+        self.v_scrollbar = ttk.Scrollbar(self.canvas_frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.v_scrollbar.grid(row=0, column=1, sticky="ns")
+        
+        # Configurar canvas para usar ambos scrollbars
+        self.canvas.configure(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
+        
+        # Configurar el frame para que se expanda adecuadamente
+        self.canvas_frame.grid_rowconfigure(0, weight=1)
+        self.canvas_frame.grid_columnconfigure(0, weight=1)
         
         # Variables de estado
         self.time_markers = []
@@ -100,8 +112,16 @@ class GanttChart(ttk.Frame):
         # Asignar colores a los procesos
         self._assign_colors()
         
-        # Redimensionar el canvas
-        self.canvas.configure(scrollregion=(0, 0, self.max_time * self.unit_width + 50, self.height))
+        # Calcular la altura necesaria basado en el número de procesos
+        process_ids = set()
+        for item in self.execution_history:
+            process_ids.add(item['process'].pid)
+        
+        # Calcular altura total necesaria (altura por proceso * número de procesos + espacio extra)
+        total_height = max(self.height, len(process_ids) * self.process_height + 50)
+        
+        # Redimensionar el canvas para acomodar todos los procesos horizontalmente y verticalmente
+        self.canvas.configure(scrollregion=(0, 0, self.max_time * self.unit_width + 50, total_height))
         
         # Dibujar la línea de tiempo completa
         self._draw_timeline(0, self.max_time)

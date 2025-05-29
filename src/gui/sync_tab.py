@@ -100,9 +100,13 @@ class SyncTab:
         # Crear el componente de diagrama de Gantt para visualizar las acciones
         self.gantt_chart = GanttChart(gantt_frame)
         
-        # Forzar un tamaño mínimo adecuado para el canvas
-        self.gantt_chart.canvas.config(width=750, height=300)
-        self.gantt_chart.canvas.pack(fill=tk.BOTH, expand=True)
+        # En lugar de pack, usamos grid para el componente gantt_chart
+        # ya que internamente GanttChart usa grid para sus componentes
+        self.gantt_chart.grid(row=0, column=0, sticky="nsew")
+        
+        # Configurar el frame para que se expanda correctamente
+        gantt_frame.grid_rowconfigure(0, weight=1)
+        gantt_frame.grid_columnconfigure(0, weight=1)
     
     def _create_info_panel(self):
         """Crea el panel de información para el simulador."""
