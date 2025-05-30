@@ -1,0 +1,7 @@
+# Formato: <PID>, <ACCION>, <RECURSO>, <CICLO>
+P1, READ, R1, 0
+P2, WRITE, R1, 2
+P3, READ, R2, 3
+P4, READ, R2, 4
+P5, WRITE, R3, 5
+P1, WRITE, R3, 6

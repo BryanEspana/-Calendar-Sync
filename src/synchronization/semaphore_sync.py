@@ -62,20 +62,109 @@ class SemaphoreSynchronization(BaseSynchronization):
     
     def execute_cycle(self):
         #Ejecuta un ciclo de la simulación para Semáforo.
-        cycle_result = super().execute_cycle()
+        # Registrar el estado antes de ejecutar el ciclo para visualización
+        cycle_actions = []
         
-        # Intentar ejecutar acciones que estaban esperando
+        # Obtener acciones que deben ejecutarse en este ciclo
+        due_actions = self.get_due_actions()
+        
+        # Primero, procesar todas las acciones con tiempo de inicio igual al ciclo actual
+        for action in due_actions:
+            success = self.process_action(action)
+            
+            # Registrar el estado de la acción para visualización
+            cycle_actions.append({
+                'action': action,
+                'success': success
+            })
+            
+            # Si la acción se completó, moverla a la lista de completadas
+            if success and action.state == "COMPLETED":
+                if action in self.pending_actions:
+                    self.pending_actions.remove(action)
+                if action not in self.completed_actions:
+                    self.completed_actions.append(action)
+        
+        # Luego, procesar acciones que estaban esperando (por tipo de operación)
+        processed_resources = {}
+        
         waiting_actions = [action for action in self.pending_actions 
                           if action.state == "WAITING"]
         
-        if waiting_actions:
-            for action in waiting_actions:
+        # Ordenar las acciones en espera por tiempo de ciclo (las más antiguas primero)
+        waiting_actions.sort(key=lambda a: a.cycle)
+        
+        # Primero procesar lecturas (pueden ser múltiples por recurso)
+        read_actions = [a for a in waiting_actions if a.action_type == "READ"]
+        for action in read_actions:
+            resource_name = action.resource_name
+            resource = self.resources.get(resource_name)
+            
+            # Verificar si el recurso existe y si ya procesamos este recurso para WRITE
+            if not resource or resource_name in processed_resources and processed_resources[resource_name] == "WRITE":
+                continue
+                
+            # Verificar disponibilidad para lectura
+            if resource.is_available_for("READ"):
                 success = self.process_action(action)
-                if success:
-                    # Si la acción se completó, moverla a la lista de completadas
+                
+                # Registrar el estado de la acción para visualización
+                cycle_actions.append({
+                    'action': action,
+                    'success': success
+                })
+                
+                # Si la acción se completó, moverla a la lista de completadas
+                if success and action.state == "COMPLETED":
                     if action in self.pending_actions:
                         self.pending_actions.remove(action)
                     if action not in self.completed_actions:
                         self.completed_actions.append(action)
+                
+                # Marcar este recurso como procesado para READ
+                if resource_name not in processed_resources:
+                    processed_resources[resource_name] = "READ"
+        
+        # Luego procesar escrituras (una por recurso)
+        write_actions = [a for a in waiting_actions if a.action_type == "WRITE"]
+        for action in write_actions:
+            resource_name = action.resource_name
+            
+            # Saltar si ya procesamos este recurso
+            if resource_name in processed_resources:
+                continue
+                
+            success = self.process_action(action)
+            
+            # Registrar el estado de la acción para visualización
+            cycle_actions.append({
+                'action': action,
+                'success': success
+            })
+            
+            # Si la acción se completó, moverla a la lista de completadas
+            if success and action.state == "COMPLETED":
+                if action in self.pending_actions:
+                    self.pending_actions.remove(action)
+                if action not in self.completed_actions:
+                    self.completed_actions.append(action)
+            
+            # Marcar este recurso como procesado para WRITE
+            processed_resources[resource_name] = "WRITE"
+        
+        # Guardar el historial de este ciclo (importante para visualización)
+        self.execution_history.append({
+            'cycle': self.current_time,
+            'actions': cycle_actions
+        })
+        
+        # Avanzar el tiempo
+        self.current_time += 1
+        
+        cycle_result = {
+            'cycle': self.current_time - 1,
+            'actions': cycle_actions,
+            'remaining': len(self.pending_actions)
+        }
         
         return cycle_result
