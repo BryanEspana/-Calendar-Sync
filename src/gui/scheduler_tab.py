@@ -340,8 +340,9 @@ class SchedulerTab:
                     y_pos = 30 + pid_index * 40
                     
                     # Dibujar el bloque con borde negro y color de relleno
-                    x1 = start_time * self.gantt_chart.unit_width + 30  # Offset para etiquetas
-                    x2 = end_time * self.gantt_chart.unit_width + 30
+                    # Usamos label_width para alinear correctamente con la línea de tiempo
+                    x1 = start_time * self.gantt_chart.unit_width + self.gantt_chart.label_width
+                    x2 = end_time * self.gantt_chart.unit_width + self.gantt_chart.label_width
                     y1 = y_pos
                     y2 = y_pos + 30
                     

@@ -56,21 +56,55 @@ class MutexSynchronization(BaseSynchronization):
         # Registrar el estado antes de ejecutar el ciclo para visualización
         cycle_actions = []
         
-        # Procesar las acciones pendientes en orden FIFO
-        if self.pending_actions:
-            current_action = self.pending_actions[0]
-            success = self.process_action(current_action)
+        # Obtener acciones que deben ejecutarse en este ciclo
+        due_actions = self.get_due_actions()
+        
+        # Primero, procesar todas las acciones con tiempo de inicio igual al ciclo actual
+        for action in due_actions:
+            success = self.process_action(action)
             
             # Registrar el estado de la acción para visualización
             cycle_actions.append({
-                'action': current_action,
+                'action': action,
                 'success': success
             })
             
             # Si la acción se completó, moverla a la lista de completadas
-            if success and current_action.state == "COMPLETED":
-                self.pending_actions.remove(current_action)
-                self.completed_actions.append(current_action)
+            if success and action.state == "COMPLETED":
+                if action in self.pending_actions:
+                    self.pending_actions.remove(action)
+                if action not in self.completed_actions:
+                    self.completed_actions.append(action)
+        
+        # Luego, procesar acciones que estaban esperando (una por recurso)
+        processed_resources = set()  # Para rastrear qué recursos ya han sido procesados
+        
+        waiting_actions = [action for action in self.pending_actions 
+                          if action.state == "WAITING"]
+        
+        # Ordenar las acciones en espera por tiempo de ciclo (las más antiguas primero)
+        waiting_actions.sort(key=lambda a: a.cycle)
+        
+        for action in waiting_actions:
+            # Solo procesar una acción por recurso en cada ciclo
+            if action.resource_name not in processed_resources:
+                success = self.process_action(action)
+                
+                # Registrar el estado de la acción para visualización
+                cycle_actions.append({
+                    'action': action,
+                    'success': success
+                })
+                
+                # Si la acción se completó, moverla a la lista de completadas
+                if success and action.state == "COMPLETED":
+                    if action in self.pending_actions:
+                        self.pending_actions.remove(action)
+                    if action not in self.completed_actions:
+                        self.completed_actions.append(action)
+                
+                # Marcar este recurso como procesado para este ciclo
+                processed_resources.add(action.resource_name)
         
         # Guardar el historial de este ciclo (importante para visualización)
         self.execution_history.append({
@@ -86,19 +120,5 @@ class MutexSynchronization(BaseSynchronization):
             'actions': cycle_actions,
             'remaining': len(self.pending_actions)
         }
-        
-        # Intentar ejecutar acciones que estaban esperando
-        waiting_actions = [action for action in self.pending_actions 
-                          if action.state == "WAITING"]
-        
-        if waiting_actions:
-            for action in waiting_actions:
-                success = self.process_action(action)
-                if success:
-                    # Si la acción se completó, moverla a la lista de completadas
-                    if action in self.pending_actions:
-                        self.pending_actions.remove(action)
-                    if action not in self.completed_actions:
-                        self.completed_actions.append(action)
         
         return cycle_result

@@ -9,8 +9,8 @@ import random
 class GanttChart(ttk.Frame):
 
     
-    def __init__(self, parent, width=800, height=300, unit_width=30, process_height=30):
-        #Inicializa el componente para el diagrama de Gantt.
+    def __init__(self, parent, width=1200, height=600, unit_width=80, process_height=60):
+        """Inicializa el componente para el diagrama de Gantt."""
 
         super().__init__(parent)
         self.parent = parent
@@ -20,6 +20,8 @@ class GanttChart(ttk.Frame):
         self.process_height = process_height
         self.colors = {}
         self.block_counter = 0 
+        self.label_width = 150  # Ancho para etiquetas de procesos/recursos
+        self.timeline_height = 30  # Altura para la línea de tiempo superior
 
         # Configurar el frame
         self.pack(fill=tk.BOTH, expand=True)
@@ -40,12 +42,20 @@ class GanttChart(ttk.Frame):
         self.v_scrollbar = ttk.Scrollbar(self.canvas_frame, orient=tk.VERTICAL, command=self.canvas.yview)
         self.v_scrollbar.grid(row=0, column=1, sticky="ns")
         
-        # Configurar canvas para usar ambos scrollbars
-        self.canvas.configure(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
+        # Configurar para scrolling
+        self.canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
         
-        # Configurar el frame para que se expanda adecuadamente
-        self.canvas_frame.grid_rowconfigure(0, weight=1)
+        # Configurar columnas y filas
         self.canvas_frame.grid_columnconfigure(0, weight=1)
+        self.canvas_frame.grid_rowconfigure(0, weight=1)
+        
+        # Dibujar área fija para las etiquetas de recursos/procesos
+        self.canvas.create_rectangle(
+            0, 0, self.label_width, height, 
+            fill="#f0f0f0", outline="gray", width=1,
+            tags="fixed_area"
+        )
         
         # Variables de estado
         self.time_markers = []
@@ -66,8 +76,12 @@ class GanttChart(ttk.Frame):
         self.colors = {}
         self.block_counter = 0
         
-        # Dibujar línea de tiempo inicial
-        self._draw_timeline(0, 10)
+        # Dibujar área fija para las etiquetas de recursos/procesos
+        self.canvas.create_rectangle(
+            0, 0, self.label_width, self.height, 
+            fill="#f0f0f0", outline="gray", width=1,
+            tags="fixed_area"
+        )
     
     def set_execution_history(self, execution_history, max_time=None):
         #Establece el historial de ejecución completo para animarlo.
@@ -150,7 +164,7 @@ class GanttChart(ttk.Frame):
         
         # Actualizar el marcador de tiempo al final
         if self.execution_history:
-            last_time = max(item['end_time'] for item in self.execution_history)
+            last_time = max(item['end_time'] for item in execution_history)
             self._draw_time_marker(last_time)
             self._ensure_visible(last_time)
     
@@ -198,27 +212,54 @@ class GanttChart(ttk.Frame):
             self.execution_history.extend(new_history)
     
     def _draw_timeline(self, start_time, end_time):
-        #Dibuja la línea de tiempo con marcadores.
-        # Línea base
-        y_pos = self.height - 20
-        self.canvas.create_line(
-            0, y_pos, 
-            end_time * self.unit_width, y_pos, 
-            width=2, fill="black"
+        """Dibuja la línea de tiempo en la parte superior del diagrama de Gantt."""
+        self.start_time = 0  # Siempre empezamos en 0 visualmente
+        self.end_time = end_time - start_time  # Ajustamos el fin del tiempo
+        
+        # Guardar el tiempo original como offset
+        self.time_offset = start_time
+        
+        # Calcular tamaño total del timeline
+        timeline_width = (self.end_time) * self.unit_width
+        
+        # Crear un fondo claro para la línea de tiempo
+        self.canvas.create_rectangle(
+            self.label_width, 0, timeline_width + self.label_width + 50, self.timeline_height,
+            fill="#e6e6e6", outline="gray", tags="timeline_bg"
         )
         
-        # Marcadores de tiempo
-        for t in range(start_time, end_time + 1):
-            x_pos = t * self.unit_width
+        # Dibujar línea principal de tiempo
+        self.canvas.create_line(
+            self.label_width, self.timeline_height, timeline_width + self.label_width + 50, self.timeline_height, 
+            fill="black", width=2, 
+            tags="timeline"
+        )
+        
+        # Dibujar marcas y etiquetas de tiempo
+        for i in range(0, self.end_time + 1):
+            # La coordenada x es relativa a 0
+            x = (i * self.unit_width) + self.label_width
+            
+            # Marca vertical
             self.canvas.create_line(
-                x_pos, y_pos - 5, 
-                x_pos, y_pos + 5, 
-                width=1, fill="black"
+                x, self.timeline_height-5, x, self.timeline_height+5, 
+                fill="black", width=1, 
+                tags="timeline_mark"
             )
+            
+            # Etiqueta de tiempo (mostramos sólo i para que empiece desde 0)
             self.canvas.create_text(
-                x_pos, y_pos + 15, 
-                text=str(t), fill="black", 
-                font=("Arial", 8)
+                x, self.timeline_height // 2, 
+                text=str(i), 
+                font=("Arial", 12, "bold"), 
+                tags="timeline_label"
+            )
+            
+            # Dibujar líneas verticales de guía (más claras)
+            self.canvas.create_line(
+                x, self.timeline_height, x, self.height,
+                fill="#cccccc", dash=(4, 4),
+                tags="timeline_guide"
             )
     
     def _draw_time_marker(self, time):
@@ -228,6 +269,7 @@ class GanttChart(ttk.Frame):
         self.canvas.delete("time_marker")
         
         # Dibujar nuevo marcador
+        x_pos = time * self.unit_width + self.label_width
         x_pos = time * self.unit_width
         self.canvas.create_line(
             x_pos, 0, 
